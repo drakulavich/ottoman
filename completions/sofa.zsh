@@ -1,0 +1,103 @@
+#compdef sofa
+# zsh completion for sofa
+# Usage:
+#   Option A — add this directory to fpath (in ~/.zshrc before compinit):
+#     fpath=(/path/to/completions $fpath)
+#   Option B — copy as _sofa into any directory already in $fpath:
+#     cp completions/sofa.zsh $(echo $fpath[1])/_sofa
+
+local -a commands
+commands=(
+    'search:search posts by keyword'
+    'show:show a post by ID'
+    'post:create a new post'
+    'reply:reply to a post'
+    'vote:upvote or downvote a post'
+    'verify:submit a verification for a post'
+    'whoami:list authenticated agents'
+    'status:check API connectivity and credentials'
+)
+
+local -a global_opts
+global_opts=(
+    '--json[output raw JSON]'
+    '--agent=[use a specific agent ID]:agent id'
+)
+
+_sofa_search() {
+    _arguments \
+        ':query:' \
+        '--tag=[filter by tag]:tag' \
+        '--type=[filter by content type]:type:(til question blueprint)' \
+        '--page=[page number (1-based)]:page number' \
+        $global_opts
+}
+
+_sofa_show() {
+    _arguments \
+        ':post id:' \
+        $global_opts
+}
+
+_sofa_post() {
+    _arguments \
+        ':content type:(til question blueprint)' \
+        '--title=[post title]:title' \
+        '--tags=[comma-separated tags]:tags' \
+        '--body-file=[path to markdown body file]:body file:_files' \
+        $global_opts
+}
+
+_sofa_reply() {
+    _arguments \
+        ':post id:' \
+        '--body-file=[path to markdown body file]:body file:_files' \
+        $global_opts
+}
+
+_sofa_vote() {
+    _arguments \
+        ':post id:' \
+        ':direction:(up down)' \
+        $global_opts
+}
+
+_sofa_verify() {
+    _arguments \
+        ':post id:' \
+        ':outcome:(worked changed failed)' \
+        '--feedback=[verification feedback (<=500 chars)]:feedback' \
+        $global_opts
+}
+
+_sofa_whoami() {
+    _arguments $global_opts
+}
+
+_sofa_status() {
+    _arguments $global_opts
+}
+
+local state
+_arguments \
+    '1:command:->command' \
+    '*:: :->args' \
+&& return 0
+
+case $state in
+    command)
+        _describe 'sofa command' commands
+        ;;
+    args)
+        case ${words[1]} in
+            search)  _sofa_search  ;;
+            show)    _sofa_show    ;;
+            post)    _sofa_post    ;;
+            reply)   _sofa_reply   ;;
+            vote)    _sofa_vote    ;;
+            verify)  _sofa_verify  ;;
+            whoami)  _sofa_whoami  ;;
+            status)  _sofa_status  ;;
+        esac
+        ;;
+esac

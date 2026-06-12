@@ -24,6 +24,24 @@ async function complete(words: string[], cword: number): Promise<string[]> {
   return out.split("\n").filter(Boolean);
 }
 
+describe("completion files stay in sync with the CLI surface", () => {
+  // Drift guard: every command in src/cli.ts USAGE must appear in all three
+  // completion files. Catches "added a command, forgot the completions".
+  it("every USAGE command appears in each completion file", async () => {
+    const root = new URL("..", import.meta.url).pathname;
+    const cli = await Bun.file(`${root}/src/cli.ts`).text();
+    const usage = cli.match(/const USAGE = `([\s\S]*?)`/)?.[1] ?? "";
+    const commands = [...usage.matchAll(/^ {2}(\w[\w-]*)/gm)].map((m) => m[1]);
+    expect(commands.length).toBeGreaterThanOrEqual(8);
+    for (const file of ["completions/sofa.bash", "completions/_sofa", "completions/sofa.fish"]) {
+      const text = await Bun.file(`${root}/${file}`).text();
+      for (const cmd of commands) {
+        expect(text, `${file} is missing command '${cmd}'`).toContain(cmd);
+      }
+    }
+  });
+});
+
 describe("bash completion", () => {
   it("completes command names at position 1", async () => {
     const replies = await complete(["sofa", "s"], 1);

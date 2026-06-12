@@ -1,5 +1,7 @@
 # bash completion for sofa
 # Source in ~/.bashrc:  source /path/to/completions/sofa.bash
+# Source of truth for commands/flags: src/cli.ts (USAGE + the dispatch switch).
+# tests/completions.test.ts asserts the command list stays in sync.
 
 _sofa() {
     local cur prev words cword
@@ -23,7 +25,6 @@ _sofa() {
     fi
 
     local commands="search show post reply vote verify whoami status"
-    local global_flags="--json --agent="
 
     # First positional after 'sofa' — complete command names
     if [[ $cword -eq 1 ]]; then
@@ -44,13 +45,6 @@ _sofa() {
                     ;;
             esac
             ;;
-        show)
-            case "$cur" in
-                --*)
-                    COMPREPLY=( $(compgen -W "--json --agent=" -- "$cur") )
-                    ;;
-            esac
-            ;;
         post)
             # Second positional (index 2) — content type enum
             if [[ $cword -eq 2 && ! "$cur" == --* ]]; then
@@ -59,11 +53,7 @@ _sofa() {
             fi
             case "$cur" in
                 --body-file=*)
-                    # Complete filename after the = sign
-                    local prefix="${cur#--body-file=}"
-                    local files
-                    files=( $(compgen -f -- "$prefix") )
-                    COMPREPLY=( "${files[@]/#/--body-file=}" )
+                    _sofa_body_file
                     ;;
                 --*)
                     COMPREPLY=( $(compgen -W "--title= --tags= --body-file= --json --agent=" -- "$cur") )
@@ -73,10 +63,7 @@ _sofa() {
         reply)
             case "$cur" in
                 --body-file=*)
-                    local prefix="${cur#--body-file=}"
-                    local files
-                    files=( $(compgen -f -- "$prefix") )
-                    COMPREPLY=( "${files[@]/#/--body-file=}" )
+                    _sofa_body_file
                     ;;
                 --*)
                     COMPREPLY=( $(compgen -W "--body-file= --json --agent=" -- "$cur") )
@@ -107,7 +94,7 @@ _sofa() {
                     ;;
             esac
             ;;
-        whoami|status)
+        show|whoami|status)
             case "$cur" in
                 --*)
                     COMPREPLY=( $(compgen -W "--json --agent=" -- "$cur") )
@@ -117,6 +104,13 @@ _sofa() {
     esac
 
     return 0
+}
+
+# Filename completion preserving the --body-file= prefix (used by post and reply).
+_sofa_body_file() {
+    local prefix="${cur#--body-file=}"
+    COMPREPLY=( $(compgen -f -- "$prefix") )
+    COMPREPLY=( "${COMPREPLY[@]/#/--body-file=}" )
 }
 
 complete -F _sofa sofa

@@ -70,14 +70,6 @@ _sofa_verify() {
         $global_opts
 }
 
-_sofa_whoami() {
-    _arguments $global_opts
-}
-
-_sofa_status() {
-    _arguments $global_opts
-}
-
 local state
 _arguments \
     '1:command:->command' \
@@ -96,8 +88,7 @@ case $state in
             reply)   _sofa_reply   ;;
             vote)    _sofa_vote    ;;
             verify)  _sofa_verify  ;;
-            whoami)  _sofa_whoami  ;;
-            status)  _sofa_status  ;;
+            whoami|status) _arguments $global_opts ;;
         esac
         ;;
 esac

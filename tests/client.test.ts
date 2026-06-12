@@ -1,6 +1,28 @@
 import { describe, expect, it } from "bun:test";
-import { startFakeSofa, testConfig } from "./fake-sofa";
+import { type FakeSofa, startFakeSofa, testConfig } from "./fake-sofa";
 import { MemorySessionStore, SofaApiError, SofaClient } from "../src/client";
+
+/**
+ * Registers the two routes needed for the "first session gets 401, second succeeds"
+ * scenario and returns a function that reports how many sessions were created.
+ */
+function route401Retry(fake: FakeSofa, sessionPrefix = "sess"): { sessions: () => number } {
+  let sessionCount = 0;
+  fake.route("POST", "/api/sessions", () => {
+    sessionCount += 1;
+    return Response.json(
+      { session_id: `${sessionPrefix}-${sessionCount}`, expires_at: new Date(Date.now() + 1800_000).toISOString() },
+      { status: 201 },
+    );
+  });
+  fake.route("GET", "/api/tags", (req) => {
+    if (req.headers.get("x-sofa-session") === `${sessionPrefix}-1`) {
+      return Response.json({ error: "invalid_session" }, { status: 401 });
+    }
+    return Response.json({ tags: [] });
+  });
+  return { sessions: () => sessionCount };
+}
 
 describe("fake-sofa helper", () => {
   it("serves injected routes and records requests", async () => {
@@ -61,24 +83,11 @@ describe("SofaClient request core", () => {
   it("recreates the session once on 401 invalid_session and retries", async () => {
     const fake = startFakeSofa();
     try {
-      let sessionCount = 0;
-      fake.route("POST", "/api/sessions", () => {
-        sessionCount += 1;
-        return Response.json(
-          { session_id: `sess-${sessionCount}`, expires_at: new Date(Date.now() + 1800_000).toISOString() },
-          { status: 201 },
-        );
-      });
-      fake.route("GET", "/api/tags", (req) => {
-        if (req.headers.get("x-sofa-session") === "sess-1") {
-          return Response.json({ error: "invalid_session" }, { status: 401 });
-        }
-        return Response.json({ tags: [] });
-      });
+      const { sessions } = route401Retry(fake);
       const client = new SofaClient(CONFIG(fake.baseUrl));
       const result = await client.tags();
       expect(result.tags).toEqual([]);
-      expect(sessionCount).toBe(2);
+      expect(sessions()).toBe(2);
     } finally {
       fake.stop();
     }
@@ -283,27 +292,14 @@ describe("SofaClient onDebug tracing", () => {
   it("emits 'session invalid — recreating' on the 401 retry path", async () => {
     const fake = startFakeSofa();
     try {
-      let sessionCount = 0;
-      fake.route("POST", "/api/sessions", () => {
-        sessionCount += 1;
-        return Response.json(
-          { session_id: `sess-retry-${sessionCount}`, expires_at: new Date(Date.now() + 1800_000).toISOString() },
-          { status: 201 },
-        );
-      });
-      fake.route("GET", "/api/tags", (req) => {
-        if (req.headers.get("x-sofa-session") === "sess-retry-1") {
-          return Response.json({ error: "invalid_session" }, { status: 401 });
-        }
-        return Response.json({ tags: [] });
-      });
+      const { sessions } = route401Retry(fake, "sess-retry");
       const lines: string[] = [];
       const client = new SofaClient(CONFIG(fake.baseUrl), undefined, {
         onDebug: (line) => lines.push(line),
       });
       await client.tags();
       expect(lines.some((l) => l === "session invalid — recreating")).toBe(true);
-      expect(sessionCount).toBe(2);
+      expect(sessions()).toBe(2);
     } finally {
       fake.stop();
     }

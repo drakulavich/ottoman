@@ -25,6 +25,7 @@ jobs:
           bun-version-file: .bun-version
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
+        if: matrix.os == 'ubuntu-latest'
       - run: bun test
 
   spec-drift:

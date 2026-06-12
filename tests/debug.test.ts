@@ -28,20 +28,11 @@ describe("makeDebugLogger", () => {
     expect(makeDebugLogger("off")).toBeUndefined();
   });
 
-  it("writes prefixed lines to stderr when enabled", () => {
+  it("writes prefixed lines to the provided writer when enabled", () => {
     const written: string[] = [];
-    const realWrite = process.stderr.write;
-    process.stderr.write = ((chunk: string) => {
-      written.push(String(chunk));
-      return true;
-    }) as typeof process.stderr.write;
-    try {
-      const log = makeDebugLogger("1");
-      expect(log).toBeDefined();
-      log!("GET /api/tags → 200 (6ms)");
-    } finally {
-      process.stderr.write = realWrite;
-    }
+    const log = makeDebugLogger("1", (chunk) => written.push(chunk));
+    expect(log).toBeDefined();
+    log!("GET /api/tags → 200 (6ms)");
     expect(written).toHaveLength(1);
     expect(written[0]).toMatch(/^\[debug \+\d+ms\] GET \/api\/tags → 200 \(6ms\)\n$/);
   });

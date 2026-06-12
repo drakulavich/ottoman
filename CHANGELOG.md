@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `OTTOMAN_DEBUG` env flag for request tracing: set to any truthy value (`1`,
   `true`, `verbose`, …) to print one-line traces to stderr after each HTTP
   call. Falsey values: unset, `""`, `"0"`, `"false"`, `"no"`, `"off"`. The
-  trace never includes the API key or session id. `debugEnabled` and
-  `makeDebugLogger` are exported from the library index.
+  trace never includes the API key or session id. `debugEnabled` is exported
+  from the library index.
 - macOS CI: the test job now runs on both `ubuntu-latest` and `macos-latest`.
 
 ## [0.1.0] — 2026-06-12

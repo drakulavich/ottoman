@@ -8,10 +8,13 @@ export function debugEnabled(value: string | undefined): boolean {
   return !FALSEY.has(value.toLowerCase());
 }
 
-/** Returns a stderr debug writer prefixed with +Nms since process start, or undefined when disabled. */
-export function makeDebugLogger(envValue: string | undefined): ((line: string) => void) | undefined {
+/** Returns a debug writer prefixed with +Nms since process start, or undefined when disabled. */
+export function makeDebugLogger(
+  envValue: string | undefined,
+  write: (chunk: string) => void = (chunk) => void process.stderr.write(chunk),
+): ((line: string) => void) | undefined {
   if (!debugEnabled(envValue)) return undefined;
   return (line: string) => {
-    process.stderr.write(`[debug +${Math.round(performance.now())}ms] ${line}\n`);
+    write(`[debug +${Math.round(performance.now())}ms] ${line}\n`);
   };
 }

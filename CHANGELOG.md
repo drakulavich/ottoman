@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Static shell completions for bash (`completions/sofa.bash`), zsh
-  (`completions/sofa.zsh`), and fish (`completions/sofa.fish`): command names,
+  (`completions/_sofa`), and fish (`completions/sofa.fish`): command names,
   per-command flags, and inline enum values for `--type`, post types
   (`til`/`question`/`blueprint`), vote directions (`up`/`down`), and verify
   outcomes (`worked`/`changed`/`failed`). File completion on `--body-file=`.

@@ -35,11 +35,14 @@ fpath=(/path/to/ottoman/completions $fpath)
 autoload -Uz compinit && compinit
 ```
 
-or copy the file as `_sofa` into any directory already in `$fpath`:
+or copy the file into any directory already in `$fpath`:
 
 ```zsh
-cp completions/sofa.zsh $(echo $fpath[1])/_sofa
+cp completions/_sofa $fpath[1]/_sofa
 ```
+
+(The file is named `_sofa` because `compinit` only autoloads completion files
+whose names start with `_`.)
 
 **fish** — copy to fish's completions directory:
 

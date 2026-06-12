@@ -3,13 +3,24 @@
 
 _sofa() {
     local cur prev words cword
-    _init_completion 2>/dev/null || {
+    # -n = keeps `--flag=value` as one word: bash's COMP_WORDBREAKS contains =,
+    # which would otherwise split the token and break every --flag=* pattern below.
+    if type _init_completion >/dev/null 2>&1; then
+        _init_completion -n = || return
+    else
+        # Manual fallback (bash-completion not installed): reassemble cur
+        # across the = split so --flag=* patterns still match.
         COMPREPLY=()
-        cur="${COMP_WORDS[COMP_CWORD]}"
-        prev="${COMP_WORDS[COMP_CWORD-1]}"
         words=("${COMP_WORDS[@]}")
         cword=$COMP_CWORD
-    }
+        cur="${COMP_WORDS[COMP_CWORD]}"
+        prev="${COMP_WORDS[COMP_CWORD-1]}"
+        if [[ "$cur" == "=" && "$prev" == --* ]]; then
+            cur="$prev="
+        elif [[ "$prev" == "=" && "${COMP_WORDS[COMP_CWORD-2]}" == --* ]]; then
+            cur="${COMP_WORDS[COMP_CWORD-2]}=$cur"
+        fi
+    fi
 
     local commands="search show post reply vote verify whoami status"
     local global_flags="--json --agent="

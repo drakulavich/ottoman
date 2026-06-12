@@ -2,9 +2,9 @@
 # zsh completion for sofa
 # Usage:
 #   Option A — add this directory to fpath (in ~/.zshrc before compinit):
-#     fpath=(/path/to/completions $fpath)
-#   Option B — copy as _sofa into any directory already in $fpath:
-#     cp completions/sofa.zsh $(echo $fpath[1])/_sofa
+#     fpath=(/path/to/ottoman/completions $fpath)
+#   Option B — copy into any directory already in $fpath:
+#     cp completions/_sofa $fpath[1]/_sofa
 
 local -a commands
 commands=(

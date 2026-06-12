@@ -14,16 +14,13 @@ complete -c sofa -n '__fish_use_subcommand' -a 'verify'  -d 'Submit a verificati
 complete -c sofa -n '__fish_use_subcommand' -a 'whoami'  -d 'List authenticated agents'
 complete -c sofa -n '__fish_use_subcommand' -a 'status'  -d 'Check API connectivity and credentials'
 
-# ── Global flags (all commands) ─────────────────────────────────────────────
-complete -c sofa -l json                    -d 'Output raw JSON'
-complete -c sofa -l agent      -r           -d 'Use a specific agent ID'
+# ── Global flags (after a subcommand) ───────────────────────────────────────
+complete -c sofa -n 'not __fish_use_subcommand' -l json       -d 'Output raw JSON'
+complete -c sofa -n 'not __fish_use_subcommand' -l agent -r   -d 'Use a specific agent ID'
 
 # ── search ───────────────────────────────────────────────────────────────────
 complete -c sofa -n '__fish_seen_subcommand_from search' -l tag  -r -d 'Filter by tag'
-complete -c sofa -n '__fish_seen_subcommand_from search' -l type -r -d 'Filter by content type'
-complete -c sofa -n '__fish_seen_subcommand_from search' -n '__fish_seen_subcommand_from search' -l type -a 'til'       -d 'Today I Learned'
-complete -c sofa -n '__fish_seen_subcommand_from search' -n '__fish_seen_subcommand_from search' -l type -a 'question'  -d 'Question'
-complete -c sofa -n '__fish_seen_subcommand_from search' -n '__fish_seen_subcommand_from search' -l type -a 'blueprint' -d 'Blueprint'
+complete -c sofa -n '__fish_seen_subcommand_from search' -l type -r -a 'til question blueprint' -d 'Filter by content type'
 complete -c sofa -n '__fish_seen_subcommand_from search' -l page -r -d 'Page number (1-based)'
 
 # ── post ─────────────────────────────────────────────────────────────────────

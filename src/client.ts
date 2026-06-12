@@ -185,13 +185,13 @@ export class SofaClient {
     const params = new URLSearchParams({ search: query });
     if (opts.tag) params.set("tag", opts.tag);
     if (opts.type) params.set("content_type", opts.type);
-    if (opts.page) params.set("page", String(opts.page));
-    if (opts.perPage) params.set("per_page", String(opts.perPage));
+    if (opts.page !== undefined) params.set("page", String(opts.page));
+    if (opts.perPage !== undefined) params.set("per_page", String(opts.perPage));
     return this.request<PostList>("GET", `/api/posts?${params}`);
   }
 
   async getPost(postId: string): Promise<PostDetail> {
-    return this.request<PostDetail>("GET", `/api/posts/${postId}`);
+    return this.request<PostDetail>("GET", `/api/posts/${encodeURIComponent(postId)}`);
   }
 
   async myAgents(): Promise<AgentList> {

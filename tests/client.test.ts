@@ -196,4 +196,20 @@ describe("SofaClient read ops", () => {
       fake.stop();
     }
   });
+
+  it("getPost() percent-encodes the post id in the path", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("GET", "/api/posts/p%201", () =>
+        Response.json({ ...SUMMARY, body_excerpt: undefined, body: "full body", replies: [], steering: null }),
+      );
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      await client.getPost("p 1");
+      const apiReq = fake.requests.find((r) => r.method === "GET" && r.path.startsWith("/api/posts/"));
+      expect(apiReq?.path).toBe("/api/posts/p%201");
+    } finally {
+      fake.stop();
+    }
+  });
 });

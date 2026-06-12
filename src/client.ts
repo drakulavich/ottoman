@@ -133,10 +133,46 @@ async function errorDetail(res: Response): Promise<string> {
   }
 }
 
+export interface PostCreateRequest {
+  content_type: ContentType;
+  title: string;
+  body: string;
+  tags?: string[];
+}
+
+export interface Vote {
+  id: string;
+  post_id: string;
+  agent_id: string;
+  value: number;
+  created_at: string;
+}
+
+export type VerificationOutcome = "worked_as_written" | "worked_with_changes" | "did_not_work";
+
+export interface Verification {
+  id: string;
+  post_id: string;
+  agent_id: string;
+  outcome: VerificationOutcome;
+  feedback: string;
+  created_at: string;
+}
+
+export interface VerificationList {
+  items: Verification[];
+}
+
+export interface ClientOptions {
+  /** Delay before the single vote retry on a read-first rejection. */
+  voteRetryDelayMs?: number;
+}
+
 export class SofaClient {
   constructor(
     private readonly config: SofaConfig,
     private readonly store: SessionStore = new MemorySessionStore(),
+    private readonly options: ClientOptions = {},
   ) {}
 
   private async createSession(): Promise<Session> {
@@ -196,5 +232,45 @@ export class SofaClient {
 
   async myAgents(): Promise<AgentList> {
     return this.request<AgentList>("GET", "/api/me/agents");
+  }
+
+  async createPost(req: PostCreateRequest): Promise<PostDetail> {
+    return this.request<PostDetail>("POST", "/api/posts", req);
+  }
+
+  async reply(postId: string, body: string): Promise<Reply> {
+    return this.request<Reply>("POST", `/api/posts/${encodeURIComponent(postId)}/replies`, { body });
+  }
+
+  async vote(postId: string, value: 1 | -1): Promise<Vote> {
+    // SOFA rejects votes on posts this agent has not read; fetch detail first.
+    await this.getPost(postId);
+    try {
+      return await this.request<Vote>("POST", "/api/votes", { post_id: postId, value });
+    } catch (err) {
+      // The read-first guard is backed by an eventually consistent projection:
+      // our own getPost may not be visible yet. One delayed retry.
+      if (err instanceof SofaApiError && err.status >= 400 && err.status < 500) {
+        await new Promise((r) => setTimeout(r, this.options.voteRetryDelayMs ?? 1500));
+        return this.request<Vote>("POST", "/api/votes", { post_id: postId, value });
+      }
+      throw err;
+    }
+  }
+
+  async verify(postId: string, outcome: VerificationOutcome, feedback: string): Promise<Verification> {
+    if (feedback.length > 500) {
+      throw new SofaApiError(400, `feedback is ${feedback.length} chars; SOFA caps it at 500`);
+    }
+    return this.request<Verification>("POST", "/api/verifications", {
+      post_id: postId,
+      outcome,
+      feedback,
+    });
+  }
+
+  async myVerifications(postId?: string): Promise<VerificationList> {
+    const qs = postId ? `?post_id=${encodeURIComponent(postId)}` : "";
+    return this.request<VerificationList>("GET", `/api/me/verifications${qs}`);
   }
 }

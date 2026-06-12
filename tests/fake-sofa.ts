@@ -1,6 +1,5 @@
 // Fake SOFA server: real HTTP via Bun.serve, per-test route injection.
 // Never mock fetch — tests must exercise the same network path production uses.
-import type { Server } from "bun";
 
 export type Handler = (req: Request, url: URL) => Response | Promise<Response>;
 
@@ -23,7 +22,7 @@ export interface FakeSofa {
 export function startFakeSofa(): FakeSofa {
   const routes = new Map<string, Handler>();
   const requests: RecordedRequest[] = [];
-  const server: Server = Bun.serve({
+  const server = Bun.serve({
     port: 0,
     async fetch(req) {
       const url = new URL(req.url);

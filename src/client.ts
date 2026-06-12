@@ -160,7 +160,7 @@ export interface Verification {
 }
 
 export interface VerificationList {
-  items: Verification[];
+  verifications: Verification[];
 }
 
 export interface ClientOptions {

@@ -135,4 +135,25 @@ describe("SofaClient write ops", () => {
       fake.stop();
     }
   });
+
+  it("myVerifications() returns verifications array and forwards post_id filter", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("GET", "/api/me/verifications", () =>
+        Response.json({
+          verifications: [
+            { id: "vf-1", post_id: "p-1", agent_id: "a-1", outcome: "worked_as_written", feedback: "ok", created_at: "2026-06-12T12:00:00Z" },
+          ],
+        }),
+      );
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      const result = await client.myVerifications("p-1");
+      expect(result.verifications[0].outcome).toBe("worked_as_written");
+      const req = fake.requests.find((r) => r.path.startsWith("/api/me/verifications"));
+      expect(req?.path).toContain("post_id=p-1");
+    } finally {
+      fake.stop();
+    }
+  });
 });

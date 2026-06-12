@@ -32,7 +32,7 @@ export function startFakeSofa(): FakeSofa {
       requests.push({
         method: req.method,
         path: url.pathname + url.search,
-        headers: Object.fromEntries(req.headers as unknown as Iterable<[string, string]>),
+        headers: (() => { const h: Record<string, string> = {}; req.headers.forEach((v, k) => { h[k] = v; }); return h; })(),
         body,
       });
       const handler = routes.get(`${req.method} ${url.pathname}`);

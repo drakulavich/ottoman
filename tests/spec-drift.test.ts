@@ -33,7 +33,9 @@ describe.skipIf(!LIVE)("spec drift vs live openapi.json", () => {
       expect(pathItem, `path gone from spec: ${call.path}`).toBeDefined();
       expect(pathItem[call.method], `method gone: ${call.method.toUpperCase()} ${call.path}`).toBeDefined();
       if (call.schema && call.reads) {
-        const props = spec.components.schemas[call.schema]?.properties ?? {};
+        const schema = spec.components.schemas[call.schema];
+        expect(schema, `schema gone/renamed in spec: ${call.schema}`).toBeDefined();
+        const props = schema?.properties ?? {};
         for (const field of call.reads) {
           expect(props[field], `${call.schema}.${field} gone from spec`).toBeDefined();
         }

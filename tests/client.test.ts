@@ -6,7 +6,7 @@ describe("fake-sofa helper", () => {
   it("serves injected routes and records requests", async () => {
     const fake = startFakeSofa();
     try {
-      fake.route("GET", "/api/tags", () => Response.json({ items: [] }));
+      fake.route("GET", "/api/tags", () => Response.json({ tags: [] }));
       const res = await fetch(`${fake.baseUrl}/api/tags`, {
         headers: { Authorization: "Bearer k" },
       });
@@ -33,7 +33,7 @@ describe("SofaClient request core", () => {
     const fake = startFakeSofa();
     try {
       fake.routeSession("sess-42");
-      fake.route("GET", "/api/tags", () => Response.json({ items: [] }));
+      fake.route("GET", "/api/tags", () => Response.json({ tags: [] }));
       const client = new SofaClient(CONFIG(fake.baseUrl));
       await client.tags();
 
@@ -52,7 +52,7 @@ describe("SofaClient request core", () => {
     const fake = startFakeSofa();
     try {
       fake.routeSession();
-      fake.route("GET", "/api/tags", () => Response.json({ items: [] }));
+      fake.route("GET", "/api/tags", () => Response.json({ tags: [] }));
       const client = new SofaClient(CONFIG(fake.baseUrl), new MemorySessionStore());
       await client.tags();
       await client.tags();
@@ -78,11 +78,11 @@ describe("SofaClient request core", () => {
         if (req.headers.get("x-sofa-session") === "sess-1") {
           return Response.json({ error: "invalid_session" }, { status: 401 });
         }
-        return Response.json({ items: [] });
+        return Response.json({ tags: [] });
       });
       const client = new SofaClient(CONFIG(fake.baseUrl));
       const result = await client.tags();
-      expect(result.items).toEqual([]);
+      expect(result.tags).toEqual([]);
       expect(sessionCount).toBe(2);
     } finally {
       fake.stop();
@@ -103,6 +103,27 @@ describe("SofaClient request core", () => {
       fake.stop();
     }
   });
+
+  it("throws SofaApiError with joined msgs when detail is a FastAPI array (422)", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("GET", "/api/tags", () =>
+        Response.json(
+          { detail: [{ msg: "field required", loc: ["body", "x"], type: "missing" }, { msg: "value error", loc: ["body", "y"], type: "value_error" }] },
+          { status: 422 },
+        ),
+      );
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      const err = await client.tags().catch((e) => e);
+      expect(err).toBeInstanceOf(SofaApiError);
+      expect(err.status).toBe(422);
+      expect(err.message).toContain("field required");
+      expect(err.message).toContain("value error");
+    } finally {
+      fake.stop();
+    }
+  });
 });
 
 const SUMMARY = {
@@ -112,7 +133,7 @@ const SUMMARY = {
   agent_id: "a-1",
   agent_name: "drakulavich-agent",
   agent_is_top_contributor: false,
-  tags: ["bun", "ipc"],
+  tags: null,
   vote_count: 3,
   reply_count: 1,
   view_count: 42,
@@ -153,6 +174,7 @@ describe("SofaClient read ops", () => {
       fake.route("GET", "/api/posts/p-1", () =>
         Response.json({
           ...SUMMARY,
+          tags: [{ id: "t-1", name: "bun", description: "" }],
           body: "full body",
           replies: [{
             id: "r-1", parent_id: "p-1", body: "a reply", agent_id: "a-2",

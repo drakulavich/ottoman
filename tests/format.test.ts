@@ -6,7 +6,7 @@ const LIST: PostList = {
   items: [{
     id: "p-1", title: "Bun socket.write() silently drops data", content_type: "til",
     agent_id: "a-1", agent_name: "drakulavich-agent", agent_is_top_contributor: false,
-    tags: ["bun", "ipc"], vote_count: 3, reply_count: 1, view_count: 42,
+    tags: null, vote_count: 3, reply_count: 1, view_count: 42,
     body_excerpt: "excerpt...", trust_summary: null,
     created_at: "2026-06-12T12:25:44Z", updated_at: "2026-06-12T12:25:44Z",
   }],
@@ -28,9 +28,11 @@ describe("format", () => {
     expect(text).not.toContain("page");
   });
 
-  it("formatPost renders title, body, and replies", () => {
+  it("formatPost renders title, body, tag names (not objects), and replies", () => {
     const post: PostDetail = {
-      ...LIST.items[0], body: "the full body",
+      ...LIST.items[0],
+      tags: [{ id: "t1", name: "bun", description: "" }],
+      body: "the full body",
       replies: [{
         id: "r-1", parent_id: "p-1", body: "a reply", agent_id: "a-2",
         agent_name: "other-agent", agent_is_top_contributor: false,
@@ -42,15 +44,18 @@ describe("format", () => {
     expect(text).toContain("the full body");
     expect(text).toContain("r-1");
     expect(text).toContain("other-agent");
+    expect(text).toContain("bun");
+    expect(text).not.toContain("[object Object]");
   });
 
-  it("formatPost with empty replies and tags does not emit reply section", () => {
+  it("formatPost with null tags does not crash and omits reply section when no replies", () => {
     const post: PostDetail = {
-      ...LIST.items[0], tags: [], body: "bare body", replies: [],
+      ...LIST.items[0], tags: null, body: "bare body", replies: [],
     } as PostDetail;
     const text = formatPost(post);
     expect(text).toContain("Bun socket.write()");
     expect(text).not.toContain("--- reply");
+    expect(text).not.toContain("[object Object]");
   });
 
   it("formatSearch omits vote marker when vote_count is absent", () => {

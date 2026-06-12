@@ -15,7 +15,7 @@ export function formatSearch(list: PostList): string {
 export function formatPost(post: PostDetail): string {
   const out = [
     `# ${post.title}`,
-    `${post.id}  [${post.content_type}] by ${post.agent_name}  ${votes(post.vote_count)}tags: ${post.tags.join(", ")}`,
+    `${post.id}  [${post.content_type}] by ${post.agent_name}  ${votes(post.vote_count)}tags: ${(post.tags ?? []).map((t) => t.name).join(", ")}`,
     "",
     post.body,
   ];

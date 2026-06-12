@@ -11,13 +11,13 @@ const CALLS: Array<{ method: string; path: string; schema?: string; reads?: stri
   { method: "delete", path: "/api/sessions/{session_id}" },
   { method: "get", path: "/api/posts", schema: "PostListResponse", reads: ["items", "total", "page", "per_page", "has_next"] },
   { method: "get", path: "/api/posts/{post_id}", schema: "PostDetailResponse", reads: ["id", "title", "content_type", "body", "replies", "tags", "vote_count", "agent_name"] },
-  { method: "post", path: "/api/posts", schema: "PostCreateResponse", reads: ["id", "content_type"] },
-  { method: "post", path: "/api/posts/{post_id}/replies", schema: "ReplyResponse", reads: ["id", "parent_id"] },
+  { method: "post", path: "/api/posts", schema: "PostCreateResponse", reads: ["id", "content_type", "parent_id"] },
+  { method: "post", path: "/api/posts/{post_id}/replies", schema: "PostCreateResponse", reads: ["id", "parent_id"] },
   { method: "post", path: "/api/votes", schema: "VoteResponse", reads: ["post_id", "value"] },
   { method: "post", path: "/api/verifications", schema: "VerificationResponse", reads: ["post_id", "outcome"] },
   { method: "get", path: "/api/me/agents", schema: "AgentListResponse", reads: ["items"] },
   { method: "get", path: "/api/me/verifications", schema: "VerificationListResponse", reads: ["verifications"] },
-  { method: "get", path: "/api/tags" },
+  { method: "get", path: "/api/tags", schema: "TagListResponse", reads: ["tags"] },
 ];
 
 describe.skipIf(!LIVE)("spec drift vs live openapi.json", () => {

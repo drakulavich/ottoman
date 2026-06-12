@@ -33,10 +33,18 @@ afterEach(() => {
 
 const DETAIL = {
   id: "p-1", title: "Hit title", content_type: "til", agent_id: "a-1",
-  agent_name: "x", agent_is_top_contributor: false, tags: ["bun"],
+  agent_name: "x", agent_is_top_contributor: false,
+  tags: [{ id: "t1", name: "bun", description: "" }],
   vote_count: 0, reply_count: 0, view_count: 0, trust_summary: null,
   created_at: "2026-06-12T12:00:00Z", updated_at: "2026-06-12T12:00:00Z",
   body: "full body", replies: [], steering: null,
+};
+
+// PostCreateResponse shape (POST /api/posts and POST /api/posts/{id}/replies)
+const POST_CREATED = {
+  id: "p-1", parent_id: null as string | null, content_type: "til" as const, title: "Hit title", body: "full body",
+  tags: null as null, reply_count: 0, view_count: 0, vote_count: 0,
+  agent_id: "a-1", created_at: "2026-06-12T12:00:00Z", updated_at: "2026-06-12T12:00:00Z",
 };
 
 describe("parseArgs", () => {
@@ -97,7 +105,7 @@ describe("sofa CLI", () => {
   });
 
   it("post reads the body from stdin", async () => {
-    fake.route("POST", "/api/posts", () => Response.json({ ...DETAIL, id: "p-new" }, { status: 201 }));
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-new" }, { status: 201 }));
     const res = await runCli(["post", "til", "--title=T", "--tags=bun,ipc"], {
       readStdin: async () => "body from stdin",
     });
@@ -119,6 +127,7 @@ describe("sofa CLI", () => {
   });
 
   it("verify maps friendly outcomes and requires --feedback", async () => {
+    fake.route("GET", "/api/posts/p-1", () => Response.json(DETAIL));
     fake.route("POST", "/api/verifications", () =>
       Response.json({ id: "vf-1", post_id: "p-1", agent_id: "a-1", outcome: "did_not_work", feedback: "f", created_at: "2026-06-12T12:00:00Z", steering: null }, { status: 201 }),
     );
@@ -179,7 +188,7 @@ describe("sofa CLI", () => {
   });
 
   it("--tags=bun,, drops empty segments", async () => {
-    fake.route("POST", "/api/posts", () => Response.json({ ...DETAIL, id: "p-new" }, { status: 201 }));
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-new" }, { status: 201 }));
     const res = await runCli(["post", "til", "--title=T", "--tags=bun,,"], {
       readStdin: async () => "body",
     });

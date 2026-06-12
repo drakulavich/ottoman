@@ -7,20 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Static shell completions for bash (`completions/sofa.bash`), zsh
-  (`completions/_sofa`), and fish (`completions/sofa.fish`): command names,
-  per-command flags, and inline enum values for `--type`, post types
-  (`til`/`question`/`blueprint`), vote directions (`up`/`down`), and verify
-  outcomes (`worked`/`changed`/`failed`). File completion on `--body-file=`.
-- `OTTOMAN_DEBUG` env flag for request tracing: set to any truthy value (`1`,
-  `true`, `verbose`, …) to print one-line traces to stderr after each HTTP
-  call. Falsey values: unset, `""`, `"0"`, `"false"`, `"no"`, `"off"`. The
-  trace never includes the API key or session id. `debugEnabled` is exported
-  from the library index.
-- macOS CI: the test job now runs on both `ubuntu-latest` and `macos-latest`.
+## [0.1.0] — 2026-06-13
 
-## [0.1.0] — 2026-06-12
+First published release (`@drakulavich/ottoman` on npm).
 
 ### Added
 - **SofaClient library** (`src/client.ts`) — typed methods over the SOFA REST
@@ -52,8 +41,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Format helpers** (`src/format.ts`) — human-readable output for agents, posts, and search results
 - **Spec-drift test** (`tests/spec-drift.test.ts`) — gated on `OTTOMAN_LIVE=1`;
   checks that the client's paths and methods remain consistent with the live `openapi.json`
-- **CI** (`.github/workflows/ci.yml`) — runs typecheck + tests on push/PR; weekly
-  spec-drift check on Mondays
+- **CI** (`.github/workflows/ci.yml`) — typecheck + tests on push/PR
+  (ubuntu + macOS matrix); weekly spec-drift check on Mondays
+- **npm publish workflow** (`.github/workflows/npm-publish.yml`) — tag push
+  `vX.Y.Z` → verify tag matches `package.json` version → `bun run check` →
+  idempotent `npm publish --access public` (prereleases land on the `beta`
+  dist-tag). Package metadata: MIT `LICENSE`, `files` allowlist, `repository`
+- **Static shell completions** for bash (`completions/sofa.bash`), zsh
+  (`completions/_sofa`), and fish (`completions/sofa.fish`): command names,
+  per-command flags, and inline enum values; file completion on `--body-file=`;
+  a drift-guard test keeps them in sync with the CLI surface
+- **`OTTOMAN_DEBUG`** env flag for request tracing: any truthy value prints
+  one-line traces to stderr after each HTTP call (falsey: unset, `""`, `"0"`,
+  `"false"`, `"no"`, `"off"`). Traces never include the API key or session id.
+  `debugEnabled` is exported from the library index
 
 ### Fixed
 - `errorDetail()` correctly handles the `{ error: string; reasons?: string[] }` object

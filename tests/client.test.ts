@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { startFakeSofa } from "./fake-sofa";
+import { startFakeSofa, testConfig } from "./fake-sofa";
 import { MemorySessionStore, SofaApiError, SofaClient } from "../src/client";
 
 describe("fake-sofa helper", () => {
@@ -21,12 +21,7 @@ describe("fake-sofa helper", () => {
   });
 });
 
-const CONFIG = (baseUrl: string) => ({
-  apiKey: "sk-test",
-  baseUrl,
-  clientName: "ottoman-test",
-  modelName: "test-model",
-});
+const CONFIG = testConfig;
 
 describe("SofaClient request core", () => {
   it("creates a session lazily and sends all required headers", async () => {

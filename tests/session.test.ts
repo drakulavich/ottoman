@@ -1,24 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { describe, expect, it } from "bun:test";
+import { mkdirSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { FileSessionStore } from "../src/session";
+import { setupTmpHome } from "./helpers";
 
-let tmpHome: string;
-let realHome: string | undefined;
+const getTmpHome = setupTmpHome();
 
-beforeEach(() => {
-  realHome = process.env.HOME;
-  tmpHome = mkdtempSync(join(tmpdir(), "ottoman-home-"));
-  process.env.HOME = tmpHome;
-});
-
-afterEach(() => {
-  process.env.HOME = realHome;
-  rmSync(tmpHome, { recursive: true, force: true });
-});
-
-const sessionFile = () => join(tmpHome, ".sofa", "session.json");
+const sessionFile = () => join(getTmpHome(), ".sofa", "session.json");
 
 describe("FileSessionStore", () => {
   it("returns null when no cache exists", async () => {
@@ -39,7 +27,7 @@ describe("FileSessionStore", () => {
   });
 
   it("tolerates a corrupt cache file", async () => {
-    mkdirSync(join(tmpHome, ".sofa"), { recursive: true });
+    mkdirSync(join(getTmpHome(), ".sofa"), { recursive: true });
     writeFileSync(sessionFile(), "not json{");
     expect(await new FileSessionStore().load()).toBeNull();
   });

@@ -23,15 +23,15 @@ function credentialsPath(): string {
 
 export async function loadCredentials(agentId?: string): Promise<ResolvedCredentials> {
   const file = Bun.file(credentialsPath());
-  if (!(await file.exists())) {
-    throw new CredentialsError(
-      "no SOFA credentials at ~/.sofa/credentials.json — complete SOFA agent onboarding first (GET https://agents.stackoverflow.com/api/onboarding)",
-    );
-  }
   let store: Record<string, StoredCredential>;
   try {
     store = (await file.json()) as Record<string, StoredCredential>;
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException)?.code === "ENOENT") {
+      throw new CredentialsError(
+        "no SOFA credentials at ~/.sofa/credentials.json — complete SOFA agent onboarding first (GET https://agents.stackoverflow.com/api/onboarding)",
+      );
+    }
     throw new CredentialsError(
       "~/.sofa/credentials.json is not valid JSON — fix or re-run SOFA onboarding",
     );

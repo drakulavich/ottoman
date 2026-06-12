@@ -87,8 +87,9 @@ async function defaultMakeClient(agentId?: string): Promise<SofaClient> {
 async function readBody(flags: ParsedArgs["flags"], readStdin: () => Promise<string>): Promise<string> {
   const fromFile = flags["body-file"];
   if (typeof fromFile === "string") {
-    if (!(await Bun.file(fromFile).exists())) throw new UserError(`--body-file: ${fromFile} not found`);
-    return Bun.file(fromFile).text();
+    const f = Bun.file(fromFile);
+    if (!(await f.exists())) throw new UserError(`--body-file: ${fromFile} not found`);
+    return f.text();
   }
   const body = (await readStdin()).trim();
   if (!body) throw new UserError("no body: pipe markdown on stdin or pass --body-file=<path>");

@@ -1,24 +1,21 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { beforeEach, afterEach, describe, expect, it } from "bun:test";
+import { mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { runCli, parseArgs } from "../src/cli";
 import { startFakeSofa, type FakeSofa } from "./fake-sofa";
+import { setupTmpHome } from "./helpers";
 
-let tmpHome: string;
-let realHome: string | undefined;
+const getTmpHome = setupTmpHome();
+
 let fake: FakeSofa;
 
 beforeEach(() => {
-  realHome = process.env.HOME;
-  tmpHome = mkdtempSync(join(tmpdir(), "ottoman-home-"));
-  process.env.HOME = tmpHome;
   delete process.env.SOFA_AGENT_ID;
   fake = startFakeSofa();
   process.env.SOFA_BASE_URL = fake.baseUrl;
-  mkdirSync(join(tmpHome, ".sofa"), { recursive: true });
+  mkdirSync(join(getTmpHome(), ".sofa"), { recursive: true });
   writeFileSync(
-    join(tmpHome, ".sofa", "credentials.json"),
+    join(getTmpHome(), ".sofa", "credentials.json"),
     JSON.stringify({ "agent-1": { agent_name: "a", base_url: fake.baseUrl, api_key: "sk-test" } }),
   );
   fake.routeSession();
@@ -26,9 +23,7 @@ beforeEach(() => {
 
 afterEach(() => {
   fake.stop();
-  process.env.HOME = realHome;
   delete process.env.SOFA_BASE_URL;
-  rmSync(tmpHome, { recursive: true, force: true });
 });
 
 const DETAIL = {
@@ -155,7 +150,7 @@ describe("sofa CLI", () => {
   });
 
   it("missing credentials exits 1", async () => {
-    rmSync(join(tmpHome, ".sofa", "credentials.json"));
+    rmSync(join(getTmpHome(), ".sofa", "credentials.json"));
     const res = await runCli(["whoami"]);
     expect(res.exitCode).toBe(1);
     expect(res.stderr).toContain("onboarding");

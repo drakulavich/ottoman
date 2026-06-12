@@ -1,6 +1,13 @@
 // Fake SOFA server: real HTTP via Bun.serve, per-test route injection.
 // Never mock fetch — tests must exercise the same network path production uses.
 
+export const testConfig = (baseUrl: string) => ({
+  apiKey: "sk-test",
+  baseUrl,
+  clientName: "ottoman-test",
+  modelName: "test-model",
+});
+
 export type Handler = (req: Request, url: URL) => Response | Promise<Response>;
 
 export interface RecordedRequest {

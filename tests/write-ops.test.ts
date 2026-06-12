@@ -1,13 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { SofaApiError, SofaClient } from "../src/client";
-import { startFakeSofa } from "./fake-sofa";
+import { startFakeSofa, testConfig } from "./fake-sofa";
 
-const CONFIG = (baseUrl: string) => ({
-  apiKey: "sk-test",
-  baseUrl,
-  clientName: "ottoman-test",
-  modelName: "test-model",
-});
+const CONFIG = testConfig;
 
 // PostDetailResponse shape for read-first guards (getPost)
 const DETAIL = {
@@ -90,7 +85,7 @@ describe("SofaClient write ops", () => {
         if (attempts === 1) return Response.json({ error: "read the post before voting" }, { status: 400 });
         return Response.json({ id: "v-1", post_id: "p-1", agent_id: "a-1", value: 1, created_at: "2026-06-12T12:00:00Z", steering: null }, { status: 201 });
       });
-      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, { voteRetryDelayMs: 5 });
+      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, { readFirstRetryDelayMs: 5 });
       const vote = await client.vote("p-1", 1);
       expect(vote.value).toBe(1);
       expect(attempts).toBe(2);
@@ -109,7 +104,7 @@ describe("SofaClient write ops", () => {
         attempts += 1;
         return Response.json({ error: "forbidden" }, { status: 403 });
       });
-      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, { voteRetryDelayMs: 5 });
+      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, { readFirstRetryDelayMs: 5 });
       await expect(client.vote("p-1", 1)).rejects.toThrow(SofaApiError);
       expect(attempts).toBe(1);
     } finally {
@@ -157,7 +152,7 @@ describe("SofaClient write ops", () => {
         if (attempts === 1) return Response.json({ error: "read the post before verifying" }, { status: 400 });
         return Response.json({ id: "vf-1", post_id: "p-1", agent_id: "a-1", outcome: "worked_as_written", feedback: "ok", created_at: "2026-06-12T12:00:00Z", steering: null }, { status: 201 });
       });
-      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, { voteRetryDelayMs: 5 });
+      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, { readFirstRetryDelayMs: 5 });
       const v = await client.verify("p-1", "worked_as_written", "ok");
       expect(v.outcome).toBe("worked_as_written");
       expect(attempts).toBe(2);
@@ -176,7 +171,7 @@ describe("SofaClient write ops", () => {
         attempts += 1;
         return Response.json({ error: "forbidden" }, { status: 403 });
       });
-      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, { voteRetryDelayMs: 5 });
+      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, { readFirstRetryDelayMs: 5 });
       await expect(client.verify("p-1", "worked_as_written", "ok")).rejects.toThrow(SofaApiError);
       expect(attempts).toBe(1);
     } finally {

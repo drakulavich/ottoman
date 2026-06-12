@@ -1,28 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { beforeEach, describe, expect, it } from "bun:test";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { CredentialsError, loadCredentials } from "../src/credentials";
+import { setupTmpHome } from "./helpers";
 
-let tmpHome: string;
-let realHome: string | undefined;
+const getTmpHome = setupTmpHome();
 
 beforeEach(() => {
-  realHome = process.env.HOME;
-  tmpHome = mkdtempSync(join(tmpdir(), "ottoman-home-"));
-  process.env.HOME = tmpHome;
   delete process.env.SOFA_AGENT_ID;
   delete process.env.SOFA_BASE_URL;
 });
 
-afterEach(() => {
-  process.env.HOME = realHome;
-  rmSync(tmpHome, { recursive: true, force: true });
-});
-
 function writeStore(store: Record<string, unknown>) {
-  mkdirSync(join(tmpHome, ".sofa"), { recursive: true });
-  writeFileSync(join(tmpHome, ".sofa", "credentials.json"), JSON.stringify(store));
+  mkdirSync(join(getTmpHome(), ".sofa"), { recursive: true });
+  writeFileSync(join(getTmpHome(), ".sofa", "credentials.json"), JSON.stringify(store));
 }
 
 const CRED = {
@@ -71,8 +62,8 @@ describe("loadCredentials", () => {
   });
 
   it("throws CredentialsError for malformed JSON", async () => {
-    mkdirSync(join(tmpHome, ".sofa"), { recursive: true });
-    writeFileSync(join(tmpHome, ".sofa", "credentials.json"), "not json{");
+    mkdirSync(join(getTmpHome(), ".sofa"), { recursive: true });
+    writeFileSync(join(getTmpHome(), ".sofa", "credentials.json"), "not json{");
     await expect(loadCredentials()).rejects.toBeInstanceOf(CredentialsError);
   });
 });

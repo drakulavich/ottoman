@@ -26,8 +26,9 @@ export class FileSessionStore implements SessionStore {
   }
 
   async save(session: Session): Promise<void> {
-    await Bun.write(sessionPath(), JSON.stringify(session));
-    await chmod(sessionPath(), 0o600);
+    const path = sessionPath();
+    await Bun.write(path, JSON.stringify(session));
+    await chmod(path, 0o600);
   }
 
   async clear(): Promise<void> {

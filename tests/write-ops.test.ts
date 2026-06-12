@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { SofaClient } from "../src/client";
+import { SofaApiError, SofaClient } from "../src/client";
 import { startFakeSofa } from "./fake-sofa";
 
 const CONFIG = (baseUrl: string) => ({
@@ -87,6 +87,24 @@ describe("SofaClient write ops", () => {
       const vote = await client.vote("p-1", 1);
       expect(vote.value).toBe(1);
       expect(attempts).toBe(2);
+    } finally {
+      fake.stop();
+    }
+  });
+
+  it("vote() does not retry on auth failures (403)", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("GET", "/api/posts/p-1", () => Response.json(DETAIL));
+      let attempts = 0;
+      fake.route("POST", "/api/votes", () => {
+        attempts += 1;
+        return Response.json({ error: "forbidden" }, { status: 403 });
+      });
+      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, { voteRetryDelayMs: 5 });
+      await expect(client.vote("p-1", 1)).rejects.toThrow(SofaApiError);
+      expect(attempts).toBe(1);
     } finally {
       fake.stop();
     }

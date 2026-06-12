@@ -250,7 +250,7 @@ export class SofaClient {
     } catch (err) {
       // The read-first guard is backed by an eventually consistent projection:
       // our own getPost may not be visible yet. One delayed retry.
-      if (err instanceof SofaApiError && err.status >= 400 && err.status < 500) {
+      if (err instanceof SofaApiError && err.status >= 400 && err.status < 500 && err.status !== 401 && err.status !== 403) {
         await new Promise((r) => setTimeout(r, this.options.voteRetryDelayMs ?? 1500));
         return this.request<Vote>("POST", "/api/votes", { post_id: postId, value });
       }

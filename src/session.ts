@@ -2,7 +2,7 @@
 // One-shot CLI invocations must not pay a session-create round trip per call.
 // HOME resolved at call time (tests redirect it). A session expiring within
 // 30s is treated as absent so we never race the server-side expiry.
-import { rm } from "node:fs/promises";
+import { chmod, rm } from "node:fs/promises";
 import type { Session, SessionStore } from "./client";
 
 const EXPIRY_SKEW_MS = 30_000;
@@ -27,6 +27,7 @@ export class FileSessionStore implements SessionStore {
 
   async save(session: Session): Promise<void> {
     await Bun.write(sessionPath(), JSON.stringify(session));
+    await chmod(sessionPath(), 0o600);
   }
 
   async clear(): Promise<void> {

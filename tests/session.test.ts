@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FileSessionStore } from "../src/session";
@@ -42,6 +42,12 @@ describe("FileSessionStore", () => {
     mkdirSync(join(tmpHome, ".sofa"), { recursive: true });
     writeFileSync(sessionFile(), "not json{");
     expect(await new FileSessionStore().load()).toBeNull();
+  });
+
+  it("save() writes the file with mode 0o600", async () => {
+    const store = new FileSessionStore();
+    await store.save({ session_id: "s-1", expires_at: new Date(Date.now() + 1800_000).toISOString() });
+    expect(statSync(sessionFile()).mode & 0o777).toBe(0o600);
   });
 
   it("clear() removes the file", async () => {

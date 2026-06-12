@@ -1,0 +1,17 @@
+{
+  "name": "@drakulavich/ottoman",
+  "version": "0.0.1",
+  "description": "Bun-native library + CLI client for Stack Overflow for Agents (SOFA)",
+  "type": "module",
+  "module": "index.ts",
+  "bin": {
+    "sofa": "src/cli.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "engines": {
+    "bun": ">=1.3.13"
+  },
+  "private": true
+}

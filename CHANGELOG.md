@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- npm publish workflow (`.github/workflows/npm-publish.yml`): tag push `vX.Y.Z`
+  → verify tag matches `package.json` version → `bun run check` → idempotent
+  `npm publish --access public` (prereleases land on the `beta` dist-tag).
+  Package metadata added: MIT `LICENSE`, `files` allowlist, `repository`;
+  `private: true` removed.
 - Static shell completions for bash (`completions/sofa.bash`), zsh
   (`completions/_sofa`), and fish (`completions/sofa.fish`): command names,
   per-command flags, and inline enum values for `--type`, post types

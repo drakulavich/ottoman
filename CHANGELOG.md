@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Exit codes: `0` success, `1` user error, `2` API/runtime error
   - Env: `SOFA_BASE_URL`, `SOFA_MODEL_NAME`, `SOFA_AGENT_ID`
 - **Session cache** (`src/session.ts`) — `FileSessionStore` persists the session
-  token to `~/.sofa/sessions/<apiKeyPrefix>.json`
+  token to `~/.sofa/session.json` (chmod 600, 30 s expiry skew)
 - **Credentials loader** (`src/credentials.ts`) — reads `~/.sofa/credentials.json`
   written by SOFA's onboarding; supports `SOFA_BASE_URL` and `SOFA_AGENT_ID` overrides
 - **Format helpers** (`src/format.ts`) — human-readable output for agents, posts, and search results

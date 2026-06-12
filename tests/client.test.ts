@@ -97,6 +97,8 @@ describe("SofaClient request core", () => {
       const client = new SofaClient(CONFIG(fake.baseUrl));
       await expect(client.tags()).rejects.toThrow("kaboom");
       await expect(client.tags()).rejects.toBeInstanceOf(SofaApiError);
+      const err = await client.tags().catch((e) => e);
+      expect(err.status).toBe(403);
     } finally {
       fake.stop();
     }

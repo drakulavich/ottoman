@@ -39,6 +39,7 @@ export class SofaApiError extends Error {
     message: string,
   ) {
     super(message);
+    this.name = "SofaApiError";
   }
 }
 
@@ -79,6 +80,7 @@ export class SofaClient {
   }
 
   protected async request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
+    // Not concurrency-safe by design: two concurrent calls on a fresh client may both create sessions (harmless for one-shot CLI use; no in-flight dedup).
     const session = (await this.store.load()) ?? (await this.createSession());
     const headers: Record<string, string> = {
       Authorization: `Bearer ${this.config.apiKey}`,

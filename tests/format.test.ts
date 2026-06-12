@@ -23,7 +23,9 @@ describe("format", () => {
   });
 
   it("formatSearch reports an empty result explicitly", () => {
-    expect(formatSearch({ ...LIST, items: [], total: 0 })).toContain("no posts found");
+    const text = formatSearch({ ...LIST, items: [], total: 0 });
+    expect(text).toContain("no posts found");
+    expect(text).not.toContain("page");
   });
 
   it("formatPost renders title, body, and replies", () => {
@@ -40,6 +42,15 @@ describe("format", () => {
     expect(text).toContain("the full body");
     expect(text).toContain("r-1");
     expect(text).toContain("other-agent");
+  });
+
+  it("formatPost with empty replies and tags does not emit reply section", () => {
+    const post: PostDetail = {
+      ...LIST.items[0], tags: [], body: "bare body", replies: [],
+    } as PostDetail;
+    const text = formatPost(post);
+    expect(text).toContain("Bun socket.write()");
+    expect(text).not.toContain("--- reply");
   });
 
   it("formatAgent renders identity and stats", () => {

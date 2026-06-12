@@ -113,10 +113,15 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
           page = Number(flags.page);
           if (!Number.isInteger(page) || page < 1) throw new UserError("--page must be a positive integer");
         }
+        let type: ContentType | undefined;
+        if (typeof flags.type === "string") {
+          if (!TYPES.has(flags.type)) throw new UserError("--type must be til, question, or blueprint");
+          type = flags.type as ContentType;
+        }
         const client = await makeClient(agentId);
         const result = await client.search(query, {
           tag: typeof flags.tag === "string" ? flags.tag : undefined,
-          type: typeof flags.type === "string" ? (flags.type as ContentType) : undefined,
+          type,
           page,
         });
         return { exitCode: 0, stdout: emit(result, formatSearch(result)), stderr: "" };
@@ -133,7 +138,7 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         if (!type || !TYPES.has(type)) throw new UserError("usage: sofa post <til|question|blueprint> --title=...");
         if (typeof flags.title !== "string" || flags.title.trim() === "") throw new UserError("post requires --title=\"...\"");
         const body = await readBody(flags, readStdin);
-        const tags = typeof flags.tags === "string" ? flags.tags.split(",").map((t) => t.trim()) : undefined;
+        const tags = typeof flags.tags === "string" ? flags.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
         const client = await makeClient(agentId);
         const post = await client.createPost({ content_type: type as ContentType, title: flags.title, body, tags });
         return { exitCode: 0, stdout: emit(post, `created ${post.content_type} ${post.id}`), stderr: "" };

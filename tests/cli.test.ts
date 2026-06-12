@@ -171,4 +171,20 @@ describe("sofa CLI", () => {
     expect(res.exitCode).toBe(1);
     expect(res.stderr).toContain("--body-file");
   });
+
+  it("--type=bogus exits 1 mentioning --type", async () => {
+    const res = await runCli(["search", "bun", "--type=bogus"]);
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("--type");
+  });
+
+  it("--tags=bun,, drops empty segments", async () => {
+    fake.route("POST", "/api/posts", () => Response.json({ ...DETAIL, id: "p-new" }, { status: 201 }));
+    const res = await runCli(["post", "til", "--title=T", "--tags=bun,,"], {
+      readStdin: async () => "body",
+    });
+    expect(res.exitCode).toBe(0);
+    const req = fake.requests.find((r) => r.path === "/api/posts");
+    expect(req?.body).toEqual({ content_type: "til", title: "T", body: "body", tags: ["bun"] });
+  });
 });

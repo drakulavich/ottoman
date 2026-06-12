@@ -47,6 +47,83 @@ export interface TagList {
   items: unknown[];
 }
 
+export type ContentType = "question" | "til" | "blueprint";
+
+export interface PostSummary {
+  id: string;
+  title: string;
+  content_type: ContentType;
+  agent_id: string;
+  agent_name: string;
+  agent_is_top_contributor: boolean;
+  tags: string[];
+  vote_count: number;
+  reply_count: number;
+  view_count: number;
+  body_excerpt: string;
+  trust_summary: unknown;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PostList {
+  items: PostSummary[];
+  total: number;
+  page: number;
+  per_page: number;
+  has_next: boolean;
+}
+
+export interface Reply {
+  id: string;
+  parent_id: string;
+  body: string;
+  agent_id: string;
+  agent_name: string;
+  agent_is_top_contributor: boolean;
+  vote_count: number;
+  trust_summary: unknown;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PostDetail extends Omit<PostSummary, "body_excerpt"> {
+  body: string;
+  replies: Reply[];
+}
+
+export interface AgentStats {
+  question_count: number;
+  answer_count: number;
+  blueprint_count: number;
+  til_count: number;
+  vote_count: number;
+  verification_count: number;
+  reputation: number;
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  persona: string;
+  avatar_type: string;
+  agent_is_top_contributor: boolean;
+  created_at: string;
+  stats: AgentStats;
+}
+
+export interface AgentList {
+  items: Agent[];
+}
+
+export interface SearchOptions {
+  tag?: string;
+  type?: ContentType;
+  page?: number;
+  perPage?: number;
+}
+
 async function errorDetail(res: Response): Promise<string> {
   try {
     const data = (await res.json()) as { error?: string; detail?: string };
@@ -102,5 +179,22 @@ export class SofaClient {
 
   async tags(): Promise<TagList> {
     return this.request<TagList>("GET", "/api/tags");
+  }
+
+  async search(query: string, opts: SearchOptions = {}): Promise<PostList> {
+    const params = new URLSearchParams({ search: query });
+    if (opts.tag) params.set("tag", opts.tag);
+    if (opts.type) params.set("content_type", opts.type);
+    if (opts.page) params.set("page", String(opts.page));
+    if (opts.perPage) params.set("per_page", String(opts.perPage));
+    return this.request<PostList>("GET", `/api/posts?${params}`);
+  }
+
+  async getPost(postId: string): Promise<PostDetail> {
+    return this.request<PostDetail>("GET", `/api/posts/${postId}`);
+  }
+
+  async myAgents(): Promise<AgentList> {
+    return this.request<AgentList>("GET", "/api/me/agents");
   }
 }

@@ -104,3 +104,96 @@ describe("SofaClient request core", () => {
     }
   });
 });
+
+const SUMMARY = {
+  id: "p-1",
+  title: "Bun socket.write() silently drops data",
+  content_type: "til",
+  agent_id: "a-1",
+  agent_name: "drakulavich-agent",
+  agent_is_top_contributor: false,
+  tags: ["bun", "ipc"],
+  vote_count: 3,
+  reply_count: 1,
+  view_count: 42,
+  body_excerpt: "A CLI command that round-trips JSON...",
+  trust_summary: null,
+  created_at: "2026-06-12T12:25:44Z",
+  updated_at: "2026-06-12T12:25:44Z",
+};
+
+describe("SofaClient read ops", () => {
+  it("search() encodes query params and returns the list", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("GET", "/api/posts", (_req, url) => {
+        expect(url.searchParams.get("search")).toBe("bun sockets");
+        expect(url.searchParams.get("tag")).toBe("bun");
+        expect(url.searchParams.get("content_type")).toBe("til");
+        expect(url.searchParams.get("page")).toBe("2");
+        return Response.json({
+          items: [SUMMARY], total: 1, page: 2, per_page: 20, has_next: false,
+          pagination_mode: "offset", steering: null,
+        });
+      });
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      const result = await client.search("bun sockets", { tag: "bun", type: "til", page: 2 });
+      expect(result.items[0].title).toContain("socket.write");
+      expect(result.total).toBe(1);
+    } finally {
+      fake.stop();
+    }
+  });
+
+  it("getPost() returns detail with replies", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("GET", "/api/posts/p-1", () =>
+        Response.json({
+          ...SUMMARY,
+          body: "full body",
+          replies: [{
+            id: "r-1", parent_id: "p-1", body: "a reply", agent_id: "a-2",
+            agent_name: "other-agent", agent_is_top_contributor: false,
+            vote_count: 0, trust_summary: null,
+            created_at: "2026-06-12T13:00:00Z", updated_at: "2026-06-12T13:00:00Z",
+          }],
+          steering: null,
+        }),
+      );
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      const post = await client.getPost("p-1");
+      expect(post.body).toBe("full body");
+      expect(post.replies[0].id).toBe("r-1");
+    } finally {
+      fake.stop();
+    }
+  });
+
+  it("myAgents() returns the items array", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("GET", "/api/me/agents", () =>
+        Response.json({
+          items: [{
+            id: "a-1", name: "drakulavich-agent", description: "d", persona: "p",
+            avatar_type: "robot", agent_is_top_contributor: false,
+            created_at: "2026-06-12T12:17:16Z",
+            stats: {
+              question_count: 0, answer_count: 0, blueprint_count: 0,
+              til_count: 1, vote_count: 0, verification_count: 0, reputation: 0,
+            },
+          }],
+        }),
+      );
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      const agents = await client.myAgents();
+      expect(agents.items[0].stats.til_count).toBe(1);
+    } finally {
+      fake.stop();
+    }
+  });
+});

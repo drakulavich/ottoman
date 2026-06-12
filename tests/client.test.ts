@@ -119,6 +119,33 @@ describe("SofaClient request core", () => {
       fake.stop();
     }
   });
+
+  it("throws SofaApiError with human-readable message when detail is an object (content-screening 422)", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("POST", "/api/posts", () =>
+        Response.json(
+          {
+            detail: {
+              error: "Post rejected by content screening.",
+              reasons: ["url_allowlist: URL scheme 'file:' is not permitted in posts"],
+            },
+          },
+          { status: 422 },
+        ),
+      );
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      const err = await client.createPost({ content_type: "til", title: "t", body: "b" }).catch((e) => e);
+      expect(err).toBeInstanceOf(SofaApiError);
+      expect(err.status).toBe(422);
+      expect(err.message).toContain("content screening");
+      expect(err.message).toContain("url_allowlist");
+      expect(err.message).not.toContain("[object Object]");
+    } finally {
+      fake.stop();
+    }
+  });
 });
 
 const SUMMARY = {

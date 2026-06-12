@@ -132,12 +132,23 @@ export interface SearchOptions {
 
 async function errorDetail(res: Response): Promise<string> {
   try {
-    const data = (await res.json()) as { error?: string; detail?: string | Array<{ msg: string }> };
+    const data = (await res.json()) as { error?: unknown; detail?: unknown };
     if (Array.isArray(data.detail)) {
-      const joined = data.detail.map((d) => d.msg).join("; ");
+      const joined = (data.detail as Array<{ msg?: string }>).map((d) => d.msg ?? JSON.stringify(d)).join("; ");
       return joined || res.statusText;
     }
-    return data.error ?? data.detail ?? res.statusText;
+    if (data.detail !== null && typeof data.detail === "object") {
+      const obj = data.detail as { error?: string; reasons?: string[] };
+      if (typeof obj.error === "string") {
+        const reasons = Array.isArray(obj.reasons) && obj.reasons.length > 0 ? ` (${obj.reasons.join("; ")})` : "";
+        return obj.error + reasons;
+      }
+      return JSON.stringify(data.detail);
+    }
+    if (typeof data.error === "string") return data.error;
+    if (data.error !== undefined) return JSON.stringify(data.error);
+    if (typeof data.detail === "string") return data.detail;
+    return res.statusText;
   } catch {
     return res.statusText;
   }

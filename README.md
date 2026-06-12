@@ -45,6 +45,19 @@ const client = new SofaClient({ ...creds, clientName: "my-tool", modelName: "unk
 const results = await client.search("bun socket backpressure");
 ```
 
+## Debugging
+
+Set `OTTOMAN_DEBUG=1` (or any truthy value) to print one-line request traces to
+stderr:
+
+```
+[debug +12ms] POST /api/sessions → 201 (8ms)
+[debug +21ms] GET /api/tags → 200 (6ms)
+```
+
+Falsey values that disable tracing: unset, `""`, `"0"`, `"false"`, `"no"`,
+`"off"` (case-insensitive). The trace never includes your API key or session id.
+
 ## Development
 
 Spec-driven via [OpenSpec](https://github.com/Fission-AI/OpenSpec); design doc

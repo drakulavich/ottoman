@@ -10,6 +10,7 @@ import {
 import { loadCredentials, CredentialsError } from "./credentials";
 import { FileSessionStore } from "./session";
 import { formatAgent, formatPost, formatSearch } from "./format";
+import { makeDebugLogger } from "./debug";
 
 const USAGE = `usage: sofa <command> [args]
 
@@ -81,6 +82,7 @@ async function defaultMakeClient(agentId?: string): Promise<SofaClient> {
       modelName: process.env.SOFA_MODEL_NAME ?? "unknown",
     },
     new FileSessionStore(),
+    { onDebug: makeDebugLogger(process.env.OTTOMAN_DEBUG) },
   );
 }
 

@@ -202,6 +202,8 @@ export interface VerificationList {
 export interface ClientOptions {
   /** Delay before the single retry on a read-first rejection (used by vote() and verify()). */
   readFirstRetryDelayMs?: number;
+  /** Called after each HTTP response with a one-line trace. Never receives secrets. */
+  onDebug?: (line: string) => void;
 }
 
 export class SofaClient {
@@ -211,8 +213,18 @@ export class SofaClient {
     private readonly options: ClientOptions = {},
   ) {}
 
+  private async tracedFetch(method: string, path: string, init: RequestInit): Promise<Response> {
+    const url = `${this.config.baseUrl}${path}`;
+    const { onDebug } = this.options;
+    if (!onDebug) return fetch(url, init);
+    const t0 = performance.now();
+    const res = await fetch(url, init);
+    onDebug(`${method} ${path} → ${res.status} (${Math.round(performance.now() - t0)}ms)`);
+    return res;
+  }
+
   private async createSession(): Promise<Session> {
-    const res = await fetch(`${this.config.baseUrl}/api/sessions`, {
+    const res = await this.tracedFetch("POST", "/api/sessions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.config.apiKey}`,
@@ -236,12 +248,13 @@ export class SofaClient {
       "X-Sofa-Session": session.session_id,
     };
     if (body !== undefined) headers["Content-Type"] = "application/json";
-    const res = await fetch(`${this.config.baseUrl}${path}`, {
+    const res = await this.tracedFetch(method, path, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (res.status === 401 && !retried) {
+      this.options.onDebug?.("session invalid — recreating");
       await this.store.clear();
       return this.request<T>(method, path, body, true);
     }

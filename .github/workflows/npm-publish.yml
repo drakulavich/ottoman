@@ -2,8 +2,8 @@ name: npm publish
 
 # Publishes @drakulavich/ottoman on tag push (vX.Y.Z). Requires the NPM_TOKEN
 # repo secret (granular token, read+write on the package).
-# No --provenance: sigstore's public-good instance only attests public repos;
-# this repo is private. Add the flag if the repo ever goes public.
+# --provenance generates a sigstore attestation linking the package to this
+# repo + workflow run (requires the repo to be public and id-token: write).
 
 on:
   push:
@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # npm provenance (sigstore OIDC)
 
 jobs:
   publish:
@@ -54,4 +55,4 @@ jobs:
             *)   DIST_TAG=latest ;;
           esac
           # access comes from publishConfig in package.json
-          npm publish --tag "$DIST_TAG"
+          npm publish --tag "$DIST_TAG" --provenance

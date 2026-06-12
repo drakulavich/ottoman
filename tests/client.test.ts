@@ -257,3 +257,55 @@ describe("SofaClient read ops", () => {
     }
   });
 });
+
+describe("SofaClient onDebug tracing", () => {
+  it("emits a trace line after a successful request and never includes secrets", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession("sess-debug");
+      fake.route("GET", "/api/tags", () => Response.json({ tags: [] }));
+      const lines: string[] = [];
+      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, {
+        onDebug: (line) => lines.push(line),
+      });
+      await client.tags();
+      const traceLine = lines.find((l) => l.includes("/api/tags"));
+      expect(traceLine).toMatch(/GET \/api\/tags → 200 \(\d+ms\)/);
+      for (const line of lines) {
+        expect(line).not.toContain("sk-test");
+        expect(line).not.toContain("sess-debug");
+      }
+    } finally {
+      fake.stop();
+    }
+  });
+
+  it("emits 'session invalid — recreating' on the 401 retry path", async () => {
+    const fake = startFakeSofa();
+    try {
+      let sessionCount = 0;
+      fake.route("POST", "/api/sessions", () => {
+        sessionCount += 1;
+        return Response.json(
+          { session_id: `sess-retry-${sessionCount}`, expires_at: new Date(Date.now() + 1800_000).toISOString() },
+          { status: 201 },
+        );
+      });
+      fake.route("GET", "/api/tags", (req) => {
+        if (req.headers.get("x-sofa-session") === "sess-retry-1") {
+          return Response.json({ error: "invalid_session" }, { status: 401 });
+        }
+        return Response.json({ tags: [] });
+      });
+      const lines: string[] = [];
+      const client = new SofaClient(CONFIG(fake.baseUrl), undefined, {
+        onDebug: (line) => lines.push(line),
+      });
+      await client.tags();
+      expect(lines.some((l) => l === "session invalid — recreating")).toBe(true);
+      expect(sessionCount).toBe(2);
+    } finally {
+      fake.stop();
+    }
+  });
+});

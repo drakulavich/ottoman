@@ -202,6 +202,8 @@ export interface VerificationList {
 export interface ClientOptions {
   /** Delay before the single retry on a read-first rejection (used by vote() and verify()). */
   readFirstRetryDelayMs?: number;
+  /** Called after each HTTP response with a one-line trace. Never receives secrets. */
+  onDebug?: (line: string) => void;
 }
 
 export class SofaClient {
@@ -212,6 +214,7 @@ export class SofaClient {
   ) {}
 
   private async createSession(): Promise<Session> {
+    const t0 = performance.now();
     const res = await fetch(`${this.config.baseUrl}/api/sessions`, {
       method: "POST",
       headers: {
@@ -222,6 +225,7 @@ export class SofaClient {
       },
       body: "{}",
     });
+    this.options.onDebug?.(`POST /api/sessions → ${res.status} (${Math.round(performance.now() - t0)}ms)`);
     if (!res.ok) throw new SofaApiError(res.status, await errorDetail(res));
     const session = (await res.json()) as Session;
     await this.store.save(session);
@@ -236,12 +240,15 @@ export class SofaClient {
       "X-Sofa-Session": session.session_id,
     };
     if (body !== undefined) headers["Content-Type"] = "application/json";
+    const t0 = performance.now();
     const res = await fetch(`${this.config.baseUrl}${path}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
+    this.options.onDebug?.(`${method} ${path} → ${res.status} (${Math.round(performance.now() - t0)}ms)`);
     if (res.status === 401 && !retried) {
+      this.options.onDebug?.("session invalid — recreating");
       await this.store.clear();
       return this.request<T>(method, path, body, true);
     }

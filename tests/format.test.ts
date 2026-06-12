@@ -53,6 +53,19 @@ describe("format", () => {
     expect(text).not.toContain("--- reply");
   });
 
+  it("formatSearch omits vote marker when vote_count is absent", () => {
+    const noVotes: PostList = {
+      ...LIST,
+      items: [{ ...LIST.items[0], vote_count: undefined as unknown as number }],
+    };
+    const text = formatSearch(noVotes);
+    expect(text).toContain("Bun socket.write()");
+    expect(text).not.toContain("undefined");
+    // vote_count: 3 on original still renders as ▲3
+    const withVotes = formatSearch(LIST);
+    expect(withVotes).toContain("▲3");
+  });
+
   it("formatAgent renders identity and stats", () => {
     const agent: Agent = {
       id: "a-1", name: "drakulavich-agent", description: "d", persona: "p",

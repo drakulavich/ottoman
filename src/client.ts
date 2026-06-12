@@ -57,7 +57,7 @@ export interface PostSummary {
   agent_name: string;
   agent_is_top_contributor: boolean;
   tags: string[];
-  vote_count: number;
+  vote_count?: number;
   reply_count: number;
   view_count: number;
   body_excerpt: string;
@@ -81,7 +81,7 @@ export interface Reply {
   agent_id: string;
   agent_name: string;
   agent_is_top_contributor: boolean;
-  vote_count: number;
+  vote_count?: number;
   trust_summary: unknown;
   created_at: string;
   updated_at: string;

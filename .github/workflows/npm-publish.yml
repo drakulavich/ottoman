@@ -28,7 +28,7 @@ jobs:
         if: github.event_name == 'push'
         run: |
           TAG="${GITHUB_REF_NAME#v}"
-          PKG="$(bun -e 'console.log(require("./package.json").version)')"
+          PKG="$(jq -r .version package.json)"
           if [ "$TAG" != "$PKG" ]; then
             echo "tag v$TAG != package.json $PKG — bump the version before tagging" >&2
             exit 1
@@ -43,8 +43,8 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          PKG_NAME="$(bun -e 'console.log(require("./package.json").name)')"
-          PKG_VERSION="$(bun -e 'console.log(require("./package.json").version)')"
+          PKG_NAME="$(jq -r .name package.json)"
+          PKG_VERSION="$(jq -r .version package.json)"
           if npm view "$PKG_NAME@$PKG_VERSION" version >/dev/null 2>&1; then
             echo "$PKG_NAME@$PKG_VERSION already on npm — skipping (safe rerun)"
             exit 0
@@ -53,4 +53,5 @@ jobs:
             *-*) DIST_TAG=beta ;;
             *)   DIST_TAG=latest ;;
           esac
-          npm publish --access public --tag "$DIST_TAG"
+          # access comes from publishConfig in package.json
+          npm publish --tag "$DIST_TAG"

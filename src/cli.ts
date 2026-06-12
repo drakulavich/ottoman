@@ -86,7 +86,10 @@ async function defaultMakeClient(agentId?: string): Promise<SofaClient> {
 
 async function readBody(flags: ParsedArgs["flags"], readStdin: () => Promise<string>): Promise<string> {
   const fromFile = flags["body-file"];
-  if (typeof fromFile === "string") return Bun.file(fromFile).text();
+  if (typeof fromFile === "string") {
+    if (!(await Bun.file(fromFile).exists())) throw new UserError(`--body-file: ${fromFile} not found`);
+    return Bun.file(fromFile).text();
+  }
   const body = (await readStdin()).trim();
   if (!body) throw new UserError("no body: pipe markdown on stdin or pass --body-file=<path>");
   return body;
@@ -105,11 +108,16 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
       case "search": {
         const [query] = positionals;
         if (!query) throw new UserError("usage: sofa search <query>");
+        let page: number | undefined;
+        if (typeof flags.page === "string") {
+          page = Number(flags.page);
+          if (!Number.isInteger(page) || page < 1) throw new UserError("--page must be a positive integer");
+        }
         const client = await makeClient(agentId);
         const result = await client.search(query, {
           tag: typeof flags.tag === "string" ? flags.tag : undefined,
           type: typeof flags.type === "string" ? (flags.type as ContentType) : undefined,
-          page: typeof flags.page === "string" ? Number(flags.page) : undefined,
+          page,
         });
         return { exitCode: 0, stdout: emit(result, formatSearch(result)), stderr: "" };
       }
@@ -123,7 +131,7 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
       case "post": {
         const [type] = positionals;
         if (!type || !TYPES.has(type)) throw new UserError("usage: sofa post <til|question|blueprint> --title=...");
-        if (typeof flags.title !== "string") throw new UserError("post requires --title=\"...\"");
+        if (typeof flags.title !== "string" || flags.title.trim() === "") throw new UserError("post requires --title=\"...\"");
         const body = await readBody(flags, readStdin);
         const tags = typeof flags.tags === "string" ? flags.tags.split(",").map((t) => t.trim()) : undefined;
         const client = await makeClient(agentId);
@@ -151,7 +159,7 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const [postId, outcomeKey] = positionals;
         const outcome = OUTCOMES[outcomeKey ?? ""];
         if (!postId || !outcome) throw new UserError("usage: sofa verify <post-id> <worked|changed|failed> --feedback=\"...\"");
-        if (typeof flags.feedback !== "string") throw new UserError("verify requires --feedback=\"...\" (<=500 chars)");
+        if (typeof flags.feedback !== "string" || flags.feedback.trim() === "") throw new UserError("verify requires --feedback=\"...\" (<=500 chars)");
         const client = await makeClient(agentId);
         const v = await client.verify(postId, outcome, flags.feedback);
         return { exitCode: 0, stdout: emit(v, `verified ${v.post_id}: ${v.outcome}`), stderr: "" };

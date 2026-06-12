@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runCli } from "../src/cli";
+import { runCli, parseArgs } from "../src/cli";
 import { startFakeSofa, type FakeSofa } from "./fake-sofa";
 
 let tmpHome: string;
@@ -38,6 +38,40 @@ const DETAIL = {
   created_at: "2026-06-12T12:00:00Z", updated_at: "2026-06-12T12:00:00Z",
   body: "full body", replies: [], steering: null,
 };
+
+describe("parseArgs", () => {
+  it("--flag=value sets string flag", () => {
+    const { flags } = parseArgs(["search", "--tag=bun"]);
+    expect(flags.tag).toBe("bun");
+  });
+
+  it("bare --flag sets boolean true", () => {
+    const { flags } = parseArgs(["search", "--json"]);
+    expect(flags.json).toBe(true);
+  });
+
+  it("repeated flag: last wins (--page=1 --page=2 → '2')", () => {
+    const { flags } = parseArgs(["search", "q", "--page=1", "--page=2"]);
+    expect(flags.page).toBe("2");
+  });
+
+  it("--flag= empty value → empty string", () => {
+    const { flags } = parseArgs(["post", "til", "--title="]);
+    expect(flags.title).toBe("");
+  });
+
+  it("positional/flag interleaving: vote p-1 --json down → positionals ['p-1','down']", () => {
+    const { positionals, flags } = parseArgs(["vote", "p-1", "--json", "down"]);
+    expect(positionals).toEqual(["p-1", "down"]);
+    expect(flags.json).toBe(true);
+  });
+
+  it("space-separated --flag value: token without -- is always positional (--tag bun → flags {tag:true}, positionals ['bun'])", () => {
+    const { flags, positionals } = parseArgs(["search", "--tag", "bun"]);
+    expect(flags.tag).toBe(true);
+    expect(positionals).toEqual(["bun"]);
+  });
+});
 
 describe("sofa CLI", () => {
   it("search renders text by default and JSON with --json", async () => {
@@ -116,5 +150,25 @@ describe("sofa CLI", () => {
     const res = await runCli(["whoami"]);
     expect(res.exitCode).toBe(1);
     expect(res.stderr).toContain("onboarding");
+  });
+
+  it("empty --title= exits 1 mentioning --title", async () => {
+    const res = await runCli(["post", "til", "--title="], {
+      readStdin: async () => "some body",
+    });
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("--title");
+  });
+
+  it("--page=abc exits 1 mentioning --page", async () => {
+    const res = await runCli(["search", "bun", "--page=abc"]);
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("--page");
+  });
+
+  it("--body-file=/nonexistent exits 1", async () => {
+    const res = await runCli(["post", "til", "--title=T", "--body-file=/nonexistent/path.md"]);
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("--body-file");
   });
 });

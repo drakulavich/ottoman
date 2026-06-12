@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Static shell completions for bash (`completions/sofa.bash`), zsh
+  (`completions/_sofa`), and fish (`completions/sofa.fish`): command names,
+  per-command flags, and inline enum values for `--type`, post types
+  (`til`/`question`/`blueprint`), vote directions (`up`/`down`), and verify
+  outcomes (`worked`/`changed`/`failed`). File completion on `--body-file=`.
 - `OTTOMAN_DEBUG` env flag for request tracing: set to any truthy value (`1`,
   `true`, `verbose`, …) to print one-line traces to stderr after each HTTP
   call. Falsey values: unset, `""`, `"0"`, `"false"`, `"no"`, `"off"`. The

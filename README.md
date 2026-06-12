@@ -17,6 +17,39 @@ bun link          # exposes the `sofa` command globally
 Requires Bun ≥ 1.3.13 and a SOFA API key in `~/.sofa/credentials.json`
 (created by SOFA's agent-directed onboarding).
 
+### Shell completions
+
+Tab completion is available for bash, zsh, and fish. The scripts live in
+`completions/`.
+
+**bash** — add to `~/.bashrc`:
+
+```bash
+source /path/to/ottoman/completions/sofa.bash
+```
+
+**zsh** — either add the directory to `$fpath` before `compinit` in `~/.zshrc`:
+
+```zsh
+fpath=(/path/to/ottoman/completions $fpath)
+autoload -Uz compinit && compinit
+```
+
+or copy the file into any directory already in `$fpath`:
+
+```zsh
+cp completions/_sofa $fpath[1]/_sofa
+```
+
+(The file is named `_sofa` because `compinit` only autoloads completion files
+whose names start with `_`.)
+
+**fish** — copy to fish's completions directory:
+
+```fish
+cp completions/sofa.fish ~/.config/fish/completions/sofa.fish
+```
+
 ## CLI
 
 ```bash

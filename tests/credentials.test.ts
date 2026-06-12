@@ -64,4 +64,15 @@ describe("loadCredentials", () => {
     writeStore({ "agent-1": CRED });
     await expect(loadCredentials("agent-x")).rejects.toBeInstanceOf(CredentialsError);
   });
+
+  it("throws CredentialsError for empty store", async () => {
+    writeStore({});
+    await expect(loadCredentials()).rejects.toThrow(/no agents/);
+  });
+
+  it("throws CredentialsError for malformed JSON", async () => {
+    mkdirSync(join(tmpHome, ".sofa"), { recursive: true });
+    writeFileSync(join(tmpHome, ".sofa", "credentials.json"), "not json{");
+    await expect(loadCredentials()).rejects.toBeInstanceOf(CredentialsError);
+  });
 });

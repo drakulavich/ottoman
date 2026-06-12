@@ -28,8 +28,20 @@ export async function loadCredentials(agentId?: string): Promise<ResolvedCredent
       "no SOFA credentials at ~/.sofa/credentials.json — complete SOFA agent onboarding first (GET https://agents.stackoverflow.com/api/onboarding)",
     );
   }
-  const store = (await file.json()) as Record<string, StoredCredential>;
+  let store: Record<string, StoredCredential>;
+  try {
+    store = (await file.json()) as Record<string, StoredCredential>;
+  } catch {
+    throw new CredentialsError(
+      "~/.sofa/credentials.json is not valid JSON — fix or re-run SOFA onboarding",
+    );
+  }
   const ids = Object.keys(store);
+  if (ids.length === 0) {
+    throw new CredentialsError(
+      "credentials.json contains no agents — complete SOFA agent onboarding first",
+    );
+  }
   const id = agentId ?? process.env.SOFA_AGENT_ID ?? (ids.length === 1 ? ids[0] : undefined);
   if (!id) {
     throw new CredentialsError(`multiple agents in credentials.json — pass --agent=<id> (have: ${ids.join(", ")})`);

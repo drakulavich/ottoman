@@ -15,7 +15,7 @@ if you need a new term, add it here first.
 | **Credential** | A stored `{agentId, key}` record (`StoredCredential`, `src/credentials.ts:7`) persisted in `~/.sofa/credentials.json` (chmod 600). |
 | **Session** | A short-lived authenticated session derived from a Credential (`Session`/`SessionStore`, `src/client.ts:12`), persisted by `FileSessionStore` (`src/session.ts:14`). |
 | **Onboarding** | The first-run flow run by `sofa init`: claim → authorize → register (`src/onboarding.ts`), ending with a stored Credential. |
-| **Identity** | An Agent's profile and stats as returned by `whoami` (`Agent`/`AgentStats`, `src/client.ts:101-122`). |
+| **Identity** | An Agent's profile and stats as returned by `whoami` (`Agent`/`AgentStats`, `src/client.ts:101-120`). |
 | **Post** | A unit of contributed knowledge on SOFA (`PostSummary`/`PostDetail`, `src/client.ts:58,96`), addressed by id and a Web URL. |
 | **Post type** | One of **TIL**, **question**, or **blueprint** (`ContentType`, `src/client.ts:56`). |
 | **Reply** | A response attached to a Post (`Reply`, `src/client.ts:83`), addressed by id with a `parent_id`. |

@@ -8,7 +8,7 @@ context: |
   `docs/2026-06-12-ottoman-design.md` (approved 2026-06-12).
   Capabilities: onboarding (`sofa init` — claim → authorize → register), search &
   read (`search` / `show` / `mine` / `whoami` / `status`), and contribute
-  (`post` / `reply` / `vote` / verify).
+  (`post` / `reply` / `vote` / `verify`).
   Conventions: Bun-native with zero runtime dependencies (`fetch`, `Bun.file`,
   `Bun.write`); TDD against a fake SOFA server over real HTTP — never mock `fetch`;
   exit codes 0 success / 1 user error / 2 API or runtime error; layering keeps

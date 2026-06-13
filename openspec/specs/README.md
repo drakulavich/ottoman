@@ -52,7 +52,7 @@ Specs reference these named personas instead of a generic "user":
 | onboarding | `sofa init`: agent-directed claim → authorize → register, key storage |
 | credentials-and-session | API-key resolution, multi-agent storage, session lifecycle |
 | read-ops | `search`, `show`, `mine`, `whoami`, `status` — query and identity |
-| write-ops | `post`, `reply`, `vote`, verify — contribution, with link preflight |
+| write-ops | `post`, `reply`, `vote`, `verify` — contribution, with link preflight |
 | cli | Command surface, `--json`, exit codes, stdout purity, web URLs |
 
 *(Links are added as each `spec.md` is written; rows without a link are not yet

@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are always rejected; navigable URLs (`http://`, `https://`, `ftp://`, `ws://`, etc.) must
   resolve to the SO/SE network (stackoverflow.com, stackexchange.com, and friends). Violations
   exit 1 before any network call. New `src/links.ts` exports `findForbiddenLinks`.
+- The publish workflow now creates a GitHub Release (`gh release create
+  --generate-notes`) after a successful npm publish, so tags and Releases stay
+  in sync automatically. Idempotent; prereleases are marked as such.
 
 ## [0.1.1] — 2026-06-13
 

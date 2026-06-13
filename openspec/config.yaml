@@ -1,0 +1,36 @@
+schema: spec-driven
+
+context: |
+  ottoman: Bun-native library + CLI client for Stack Overflow for Agents (SOFA),
+  published as `@drakulavich/ottoman`; the CLI command is `sofa`. One hand-written
+  typed HTTP client (`src/client.ts`, `SofaClient`) and a thin CLI shell
+  (`src/cli.ts`) built from the same core. Design doc:
+  `docs/2026-06-12-ottoman-design.md` (approved 2026-06-12).
+  Capabilities: onboarding (`sofa init` — claim → authorize → register), search &
+  read (`search` / `show` / `mine` / `whoami` / `status`), and contribute
+  (`post` / `reply` / `vote` / `verify`).
+  Conventions: Bun-native with zero runtime dependencies (`fetch`, `Bun.file`,
+  `Bun.write`); TDD against a fake SOFA server over real HTTP — never mock `fetch`;
+  exit codes 0 success / 1 user error / 2 API or runtime error; layering keeps
+  `src/client.ts` pure (no fs/env), with credential and session state in
+  `src/credentials.ts` / `src/session.ts` and the CLI a thin shell; paths under
+  `~` resolve at call time (tests redirect `$HOME`); the client is hand-written
+  (no codegen) and the spec-drift test (`OTTOMAN_LIVE=1 bun test`) is the contract
+  with SOFA's `openapi.json`; the API key never reaches stdout, `--json`, or any
+  error message — only the chmod-600 credential file (`~/.sofa/credentials.json`);
+  user-facing install instructions use bun (`bun add -g @drakulavich/ottoman`),
+  never npm.
+  Baseline specs live in openspec/specs/ — one capability per directory; see
+  openspec/specs/README.md for personas and reading order, GLOSSARY.md for
+  canonical terms.
+
+rules:
+  proposal:
+    - Always include a "Non-goals" section
+  specs:
+    - Use glossary terms from openspec/specs/GLOSSARY.md verbatim
+    - Every requirement needs at least one happy-path and one error/edge scenario
+    - State outcomes, not implementation mechanisms, in requirement text
+    - Reference named personas (Sena/Demir/Mara), never a generic "user"
+    - Record anything uncertain or where spec and code disagree under "Open Issues" — never invent a resolution
+    - Trace each requirement to code with file:line refs in a Technical Note

@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it } from "bun:test";
-import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runCli, parseArgs } from "../src/cli";
 import { startFakeSofa, type FakeSofa } from "./fake-sofa";
@@ -228,5 +228,76 @@ describe("sofa CLI", () => {
     expect(res.exitCode).toBe(0);
     const req = fake.requests.find((r) => r.path === "/api/posts");
     expect(req?.body).toEqual({ content_type: "til", title: "T", body: "body", tags: ["bun"] });
+  });
+
+  it("post records entry to ledger", async () => {
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-ledger" }, { status: 201 }));
+    const res = await runCli(["post", "til", "--title=LedgerTitle"], {
+      readStdin: async () => "body",
+    });
+    expect(res.exitCode).toBe(0);
+    const ledgerFile = join(getTmpHome(), ".sofa", "posts.json");
+    expect(existsSync(ledgerFile)).toBe(true);
+    const ledger = JSON.parse(readFileSync(ledgerFile, "utf8")) as Array<{ id: string }>;
+    expect(ledger.some((e) => e.id === "p-ledger")).toBe(true);
+  });
+
+  it("mine lists recorded posts", async () => {
+    // Set up two posts in the ledger and route getPost for each
+    fake.route("GET", "/api/posts/p-m1", () =>
+      Response.json({ ...DETAIL, id: "p-m1", title: "Mine Post One", content_type: "til" }),
+    );
+    fake.route("GET", "/api/posts/p-m2", () =>
+      Response.json({ ...DETAIL, id: "p-m2", title: "Mine Post Two", content_type: "question" }),
+    );
+    // First create two posts to populate the ledger
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-m1", content_type: "til", title: "Mine Post One" }, { status: 201 }));
+    await runCli(["post", "til", "--title=Mine Post One"], { readStdin: async () => "body" });
+    // Reroute POST for second post
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-m2", content_type: "question", title: "Mine Post Two" }, { status: 201 }));
+    await runCli(["post", "question", "--title=Mine Post Two"], { readStdin: async () => "body" });
+
+    const res = await runCli(["mine"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("Mine Post One");
+    expect(res.stdout).toContain("Mine Post Two");
+  });
+
+  it("mine shows <deleted> for 404 entries and still lists others", async () => {
+    fake.route("GET", "/api/posts/p-alive", () =>
+      Response.json({ ...DETAIL, id: "p-alive", title: "Alive Post" }),
+    );
+    fake.route("GET", "/api/posts/p-dead", () =>
+      Response.json({ error: "not found" }, { status: 404 }),
+    );
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-alive", title: "Alive Post" }, { status: 201 }));
+    await runCli(["post", "til", "--title=Alive Post"], { readStdin: async () => "body" });
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-dead", title: "Dead Post" }, { status: 201 }));
+    await runCli(["post", "til", "--title=Dead Post"], { readStdin: async () => "body" });
+
+    const res = await runCli(["mine"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("Alive Post");
+    expect(res.stdout).toContain("<deleted>");
+  });
+
+  it("mine empty ledger shows message", async () => {
+    const res = await runCli(["mine"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("no posts recorded yet");
+  });
+
+  it("mine --json returns array of fetched posts", async () => {
+    fake.route("GET", "/api/posts/p-j1", () =>
+      Response.json({ ...DETAIL, id: "p-j1", title: "JSON Mine" }),
+    );
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-j1", title: "JSON Mine" }, { status: 201 }));
+    await runCli(["post", "til", "--title=JSON Mine"], { readStdin: async () => "body" });
+
+    const res = await runCli(["mine", "--json"]);
+    expect(res.exitCode).toBe(0);
+    const arr = JSON.parse(res.stdout) as Array<{ id: string }>;
+    expect(Array.isArray(arr)).toBe(true);
+    expect(arr.some((p) => p.id === "p-j1")).toBe(true);
   });
 });

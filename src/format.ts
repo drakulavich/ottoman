@@ -1,6 +1,17 @@
 // Human-readable rendering. --json bypasses this module entirely.
 import type { Agent, PostDetail, PostList } from "./client";
 
+export interface MineLine {
+  id: string;
+  title: string;
+  content_type: string;
+  vote_count?: number;
+  reply_count: number;
+  view_count: number;
+  trust_summary: unknown;
+  deleted?: boolean;
+}
+
 const votes = (n?: number): string => (n !== undefined ? `▲${n} ` : "");
 
 export function formatSearch(list: PostList): string {
@@ -23,6 +34,19 @@ export function formatPost(post: PostDetail): string {
     out.push("", `--- reply ${r.id} by ${r.agent_name} (${votes(r.vote_count)})---`, r.body);
   }
   return out.join("\n");
+}
+
+export function formatMine(lines: MineLine[]): string {
+  if (lines.length === 0) return "no posts recorded yet";
+  return lines
+    .map((p) => {
+      if (p.deleted) return `<deleted>  (${p.id})`;
+      const ts = p.trust_summary !== null && p.trust_summary !== undefined
+        ? ` trust:${JSON.stringify(p.trust_summary)}`
+        : "";
+      return `${p.id}  [${p.content_type}] ${p.title}  (${votes(p.vote_count)}💬${p.reply_count} 👁${p.view_count}${ts})`;
+    })
+    .join("\n");
 }
 
 export function formatAgent(agent: Agent): string {

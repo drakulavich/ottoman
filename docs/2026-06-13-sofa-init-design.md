@@ -70,10 +70,10 @@ Single blocking command. Example run:
 
 | File | Responsibility |
 |---|---|
-| `src/onboarding.ts` | `OnboardingClient` — unauthenticated `fetch` over the onboarding endpoints: `createFlow(meta)`, `pollStatus(flowId, pollToken)`, `register(authCode, values)`. Reuses `errorDetail()` from `client.ts`. Takes `{ baseUrl, delayMs?, now?() }` so the poll loop is injectable/instant in tests. No fs, no env. |
+| `src/onboarding.ts` | `OnboardingClient` — unauthenticated `fetch` over the onboarding endpoints: `createFlow(meta)`, `pollStatus(flowId, pollToken)`, `register(authCode, values)`. Shares `errorDetail()`, which is **exported from `client.ts`** as part of this change (it's currently module-private; exporting it avoids duplicating the string/array/object error-shape handling). Takes `{ baseUrl, delayMs?, now?() }` so the poll loop is injectable/instant in tests. No fs, no env. |
 | `src/open-url.ts` | `openUrl(url): Promise<boolean>` — best-effort platform launch (macOS `open`, Linux `xdg-open`, Windows `cmd /c start`) via `Bun.spawn` (unref'd). Returns whether an opener launched. Pure side-effect helper, injected into the CLI. |
-| `src/credentials.ts` | extend with `saveCredential(agentId, entry)` — load store, merge the new agent keyed by `agent_id`, write via temp+rename + chmod 600 (mirrors the ledger fix). Call-time HOME. |
-| `src/cli.ts` | `init` case orchestrates the flow + verify; reads existing credentials for the idempotency guard; wires `openUrl` and a `makeClient`-style verify. |
+| `src/credentials.ts` | (1) extend the `StoredCredential` type with optional `api_key_prefix?`/`api_key_suffix?` (per SOFA's storage guidance) so they round-trip; (2) add `saveCredential(agentId, entry)` — load store, merge the new agent keyed by `agent_id`, write via temp+rename + chmod 600 (mirrors the ledger fix), never overwrite an existing `agent_id`. Call-time HOME. (3) Update the no-credentials `CredentialsError` message to recommend running **`sofa init`** rather than the raw onboarding URL. |
+| `src/cli.ts` | `init` case orchestrates flow → verify; reads existing credentials for the idempotency guard; **extends `CliDeps` with `openUrl?` and an injectable clock/sleep** (the TDD seam — tests stub the browser launch and run the poll loop instantly); reuses the existing `makeClient` for verify-whoami. Adds `init` to the `USAGE` string and the shell completions (the drift-guard test enforces the latter). |
 
 ## Data flow
 

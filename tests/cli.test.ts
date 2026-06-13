@@ -287,6 +287,20 @@ describe("sofa CLI", () => {
     expect(res.stdout).toContain("no posts recorded yet");
   });
 
+  it("ledger failure does not mask successful post (exit 0, warning on stderr)", async () => {
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-ledger-fail" }, { status: 201 }));
+    // Block the ledger write: make posts.json a directory so Bun.write throws.
+    // Credentials in .sofa/credentials.json are already written by beforeEach and remain intact.
+    mkdirSync(join(getTmpHome(), ".sofa", "posts.json"), { recursive: true });
+    const res = await runCli(["post", "til", "--title=T"], {
+      readStdin: async () => "body",
+    });
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("created");
+    expect(res.stdout).toContain("p-ledger-fail");
+    expect(res.stderr).toContain("warning");
+  });
+
   it("post with file:// body exits 1 and does not hit server", async () => {
     const res = await runCli(["post", "til", "--title=T"], {
       readStdin: async () => "see file:///etc/passwd for details",

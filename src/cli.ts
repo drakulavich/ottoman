@@ -55,13 +55,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
   return { command, positionals, flags };
 }
 
-export interface MakeClientResult {
-  client: SofaClient;
-  baseUrl: string;
-}
-
 export interface CliDeps {
-  makeClient?: (agentId?: string) => Promise<MakeClientResult>;
+  makeClient?: (agentId?: string) => Promise<SofaClient>;
   readStdin?: () => Promise<string>;
 }
 
@@ -81,9 +76,9 @@ const OUTCOMES: Record<string, VerificationOutcome> = {
 
 const TYPES = new Set(["til", "question", "blueprint"]);
 
-async function defaultMakeClient(agentId?: string): Promise<MakeClientResult> {
+async function defaultMakeClient(agentId?: string): Promise<SofaClient> {
   const creds = await loadCredentials(agentId);
-  const client = new SofaClient(
+  return new SofaClient(
     {
       apiKey: creds.apiKey,
       baseUrl: creds.baseUrl,
@@ -93,7 +88,6 @@ async function defaultMakeClient(agentId?: string): Promise<MakeClientResult> {
     new FileSessionStore(),
     { onDebug: makeDebugLogger(process.env.OTTOMAN_DEBUG) },
   );
-  return { client, baseUrl: creds.baseUrl };
 }
 
 async function readBody(flags: ParsedArgs["flags"], readStdin: () => Promise<string>): Promise<string> {
@@ -131,8 +125,8 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
           if (!TYPES.has(flags.type)) throw new UserError("--type must be til, question, or blueprint");
           type = flags.type as ContentType;
         }
-        const { client: searchClient } = await makeClient(agentId);
-        const result = await searchClient.search(query, {
+        const client = await makeClient(agentId);
+        const result = await client.search(query, {
           tag: typeof flags.tag === "string" ? flags.tag : undefined,
           type,
           page,
@@ -142,9 +136,9 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
       case "show": {
         const [postId] = positionals;
         if (!postId) throw new UserError("usage: sofa show <post-id>");
-        const { client: showClient, baseUrl: showBaseUrl } = await makeClient(agentId);
-        const post = await showClient.getPost(postId);
-        const webUrl = postWebUrl(showBaseUrl, post.content_type, post.id);
+        const client = await makeClient(agentId);
+        const post = await client.getPost(postId);
+        const webUrl = postWebUrl(client.baseUrl, post.content_type, post.id);
         return { exitCode: 0, stdout: emit(post, `${formatPost(post)}\n${webUrl}`), stderr: "" };
       }
       case "post": {
@@ -155,11 +149,16 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const violations = findForbiddenLinks(body);
         if (violations.length > 0) throw new UserError(`post body has links SOFA will reject:\n  - ${violations.join("\n  - ")}`);
         const tags = typeof flags.tags === "string" ? flags.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
-        const { client: postClient, baseUrl: postBaseUrl } = await makeClient(agentId);
-        const post = await postClient.createPost({ content_type: type as ContentType, title: flags.title, body, tags });
-        await recordPost({ id: post.id, content_type: post.content_type, title: post.title, created_at: post.created_at });
-        const webUrl = postWebUrl(postBaseUrl, post.content_type, post.id);
-        return { exitCode: 0, stdout: emit(post, `created ${post.content_type} ${post.id}\n${webUrl}`), stderr: "" };
+        const client = await makeClient(agentId);
+        const post = await client.createPost({ content_type: type as ContentType, title: flags.title, body, tags });
+        let ledgerWarning = "";
+        try {
+          await recordPost({ id: post.id, content_type: post.content_type, title: post.title, created_at: post.created_at });
+        } catch (err) {
+          ledgerWarning = `warning: could not record post to local ledger: ${err instanceof Error ? err.message : String(err)}`;
+        }
+        const webUrl = postWebUrl(client.baseUrl, post.content_type, post.id);
+        return { exitCode: 0, stdout: emit(post, `created ${post.content_type} ${post.id}\n${webUrl}`), stderr: ledgerWarning };
       }
       case "reply": {
         const [postId] = positionals;
@@ -167,8 +166,8 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const body = await readBody(flags, readStdin);
         const violations = findForbiddenLinks(body);
         if (violations.length > 0) throw new UserError(`post body has links SOFA will reject:\n  - ${violations.join("\n  - ")}`);
-        const { client: replyClient } = await makeClient(agentId);
-        const reply = await replyClient.reply(postId, body);
+        const client = await makeClient(agentId);
+        const reply = await client.reply(postId, body);
         return { exitCode: 0, stdout: emit(reply, `created reply ${reply.id} on ${reply.parent_id}`), stderr: "" };
       }
       case "vote": {
@@ -176,8 +175,8 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         if (!postId || !["up", "down"].includes(direction ?? "")) {
           throw new UserError("usage: sofa vote <post-id> <up|down>");
         }
-        const { client: voteClient } = await makeClient(agentId);
-        const vote = await voteClient.vote(postId, direction === "up" ? 1 : -1);
+        const client = await makeClient(agentId);
+        const vote = await client.vote(postId, direction === "up" ? 1 : -1);
         return { exitCode: 0, stdout: emit(vote, `voted ${direction} on ${vote.post_id}`), stderr: "" };
       }
       case "verify": {
@@ -185,19 +184,19 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const outcome = OUTCOMES[outcomeKey ?? ""];
         if (!postId || !outcome) throw new UserError("usage: sofa verify <post-id> <worked|changed|failed> --feedback=\"...\"");
         if (typeof flags.feedback !== "string" || flags.feedback.trim() === "") throw new UserError("verify requires --feedback=\"...\" (<=500 chars)");
-        const { client: verifyClient } = await makeClient(agentId);
-        const v = await verifyClient.verify(postId, outcome, flags.feedback);
+        const client = await makeClient(agentId);
+        const v = await client.verify(postId, outcome, flags.feedback);
         return { exitCode: 0, stdout: emit(v, `verified ${v.post_id}: ${v.outcome}`), stderr: "" };
       }
       case "whoami": {
-        const { client: whoamiClient } = await makeClient(agentId);
-        const agents = await whoamiClient.myAgents();
+        const client = await makeClient(agentId);
+        const agents = await client.myAgents();
         const text = agents.items.map(formatAgent).join("\n\n");
         return { exitCode: 0, stdout: emit(agents, text), stderr: "" };
       }
       case "status": {
-        const { client: statusClient } = await makeClient(agentId); // throws CredentialsError -> exit 1
-        const agents = await statusClient.myAgents(); // exercises session + identity
+        const client = await makeClient(agentId); // throws CredentialsError -> exit 1
+        const agents = await client.myAgents(); // exercises session + identity
         const status = { ready: true, agents: agents.items.length };
         return { exitCode: 0, stdout: emit(status, `SOFA status: ready (key present, session ok, ${agents.items.length} agent(s))`), stderr: "" };
       }
@@ -206,30 +205,26 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         if (entries.length === 0) {
           return { exitCode: 0, stdout: emit([], "no posts recorded yet"), stderr: "" };
         }
-        const { client: mineClient } = await makeClient(agentId);
-        const lines: MineLine[] = [];
-        const fetched: unknown[] = [];
-        for (const entry of entries) {
-          try {
-            const post = await mineClient.getPost(entry.id);
-            lines.push({
-              id: post.id,
-              title: post.title,
-              content_type: post.content_type,
-              vote_count: post.vote_count,
-              reply_count: post.reply_count,
-              view_count: post.view_count,
-              trust_summary: post.trust_summary,
-            });
-            fetched.push(post);
-          } catch (err) {
-            if (err instanceof SofaApiError && err.status === 404) {
-              lines.push({ id: entry.id, title: entry.title, content_type: entry.content_type, reply_count: 0, view_count: 0, trust_summary: null, deleted: true });
-            } else {
+        const client = await makeClient(agentId);
+        type MineResult = { kind: "found"; post: import("./client").PostDetail } | { kind: "deleted"; entry: typeof entries[number] };
+        const results = await Promise.all(
+          entries.map(async (entry): Promise<MineResult> => {
+            try {
+              return { kind: "found", post: await client.getPost(entry.id) };
+            } catch (err) {
+              if (err instanceof SofaApiError && err.status === 404) {
+                return { kind: "deleted", entry };
+              }
               throw err;
             }
-          }
-        }
+          }),
+        );
+        const lines: MineLine[] = results.map((r) =>
+          r.kind === "found"
+            ? { id: r.post.id, title: r.post.title, content_type: r.post.content_type, vote_count: r.post.vote_count, reply_count: r.post.reply_count, view_count: r.post.view_count, trust_summary: r.post.trust_summary }
+            : { id: r.entry.id, title: r.entry.title, content_type: r.entry.content_type, reply_count: 0, view_count: 0, trust_summary: null, deleted: true },
+        );
+        const fetched = results.filter((r): r is Extract<MineResult, { kind: "found" }> => r.kind === "found").map((r) => r.post);
         return { exitCode: 0, stdout: emit(fetched, formatMine(lines)), stderr: "" };
       }
       default:

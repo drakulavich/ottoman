@@ -213,6 +213,10 @@ export class SofaClient {
     private readonly options: ClientOptions = {},
   ) {}
 
+  get baseUrl(): string {
+    return this.config.baseUrl;
+  }
+
   private async tracedFetch(method: string, path: string, init: RequestInit): Promise<Response> {
     const url = `${this.config.baseUrl}${path}`;
     const { onDebug } = this.options;

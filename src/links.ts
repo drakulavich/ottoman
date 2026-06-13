@@ -33,26 +33,15 @@ const NAVIGABLE_SCHEME = /^(https?|ftps?|sftp|wss?):/i;
 const URL_PATTERN = /([a-zA-Z][a-zA-Z0-9+\-.]*):(?:\/\/)?([^\s)>\]"]*)/g;
 
 /**
- * Extract the true hostname from a navigable URL string using the URL constructor,
- * which correctly handles userinfo (user:pass@host), ports, and IDN/punycode.
- * Falls back to regex extraction when the URL constructor throws (e.g. non-http schemes
- * like ftp:// that older environments may reject).
+ * Extract the true hostname from a navigable URL's authority segment.
+ * Normalises to https:// so the URL constructor accepts any navigable scheme.
+ * Fail-closed: returns "" (not on allowlist → flagged) if the URL is malformed.
  */
-function extractHost(scheme: string, rest: string): string {
-  // Normalise to https:// so the URL constructor always accepts it
-  const normalised = `https://${rest.replace(/^\/\//, "")}`;
+function extractHost(rest: string): string {
   try {
-    return new URL(normalised).hostname;
+    return new URL(`https://${rest.replace(/^\/\//, "")}`).hostname;
   } catch {
-    // Fallback: strip userinfo then port from the authority segment
-    let authority = rest.replace(/^\/\//, "");
-    // Trim path/query/fragment
-    const pathIdx = authority.search(/[/?#]/);
-    if (pathIdx !== -1) authority = authority.slice(0, pathIdx);
-    // Strip userinfo (everything up to and including the last @)
-    if (authority.includes("@")) authority = authority.slice(authority.lastIndexOf("@") + 1);
-    // Strip port
-    return authority.split(":")[0];
+    return "";
   }
 }
 
@@ -73,7 +62,7 @@ export function findForbiddenLinks(text: string): string[] {
     }
 
     if (NAVIGABLE_SCHEME.test(`${scheme}:`)) {
-      const host = extractHost(scheme, rest);
+      const host = extractHost(rest);
 
       if (!isAllowedHost(host)) {
         violations.push(

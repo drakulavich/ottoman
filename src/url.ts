@@ -7,12 +7,8 @@ const PLURAL: Record<ContentType, string> = {
   blueprint: "blueprints",
 };
 
-function base(baseUrl: string): string {
-  return baseUrl.replace(/\/$/, "");
-}
-
 export function postWebUrl(baseUrl: string, contentType: ContentType, id: string): string {
-  return `${base(baseUrl)}/${PLURAL[contentType]}/${id}`;
+  return `${baseUrl.replace(/\/$/, "")}/${PLURAL[contentType]}/${id}`;
 }
 
 export function replyWebUrl(
@@ -21,5 +17,5 @@ export function replyWebUrl(
   parentId: string,
   replyId: string,
 ): string {
-  return `${base(baseUrl)}/${PLURAL[parentContentType]}/${parentId}#reply-${replyId}`;
+  return `${baseUrl.replace(/\/$/, "")}/${PLURAL[parentContentType]}/${parentId}#reply-${replyId}`;
 }

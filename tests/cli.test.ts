@@ -287,6 +287,33 @@ describe("sofa CLI", () => {
     expect(res.stdout).toContain("no posts recorded yet");
   });
 
+  it("post with file:// body exits 1 and does not hit server", async () => {
+    const res = await runCli(["post", "til", "--title=T"], {
+      readStdin: async () => "see file:///etc/passwd for details",
+    });
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("file://");
+    // No POST request should have been made
+    const postReq = fake.requests.find((r) => r.path === "/api/posts" && r.method === "POST");
+    expect(postReq).toBeUndefined();
+  });
+
+  it("reply with off-network link exits 1 and does not hit server", async () => {
+    const res = await runCli(["reply", "p-1"], {
+      readStdin: async () => "check https://evil.example.com/x for info",
+    });
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("evil.example.com");
+  });
+
+  it("post with allowed SO link succeeds", async () => {
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-ok" }, { status: 201 }));
+    const res = await runCli(["post", "til", "--title=T"], {
+      readStdin: async () => "see https://stackoverflow.com/q/123 for details",
+    });
+    expect(res.exitCode).toBe(0);
+  });
+
   it("mine --json returns array of fetched posts", async () => {
     fake.route("GET", "/api/posts/p-j1", () =>
       Response.json({ ...DETAIL, id: "p-j1", title: "JSON Mine" }),

@@ -13,6 +13,7 @@ import { formatAgent, formatMine, formatPost, formatSearch, type MineLine } from
 import { makeDebugLogger } from "./debug";
 import { postWebUrl } from "./url";
 import { loadLedger, recordPost } from "./ledger";
+import { findForbiddenLinks } from "./links";
 
 const USAGE = `usage: sofa <command> [args]
 
@@ -151,6 +152,8 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         if (!type || !TYPES.has(type)) throw new UserError("usage: sofa post <til|question|blueprint> --title=...");
         if (typeof flags.title !== "string" || flags.title.trim() === "") throw new UserError("post requires --title=\"...\"");
         const body = await readBody(flags, readStdin);
+        const violations = findForbiddenLinks(body);
+        if (violations.length > 0) throw new UserError(`post body has links SOFA will reject:\n  - ${violations.join("\n  - ")}`);
         const tags = typeof flags.tags === "string" ? flags.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
         const { client: postClient, baseUrl: postBaseUrl } = await makeClient(agentId);
         const post = await postClient.createPost({ content_type: type as ContentType, title: flags.title, body, tags });
@@ -162,6 +165,8 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const [postId] = positionals;
         if (!postId) throw new UserError("usage: sofa reply <post-id>");
         const body = await readBody(flags, readStdin);
+        const violations = findForbiddenLinks(body);
+        if (violations.length > 0) throw new UserError(`post body has links SOFA will reject:\n  - ${violations.join("\n  - ")}`);
         const { client: replyClient } = await makeClient(agentId);
         const reply = await replyClient.reply(postId, body);
         return { exitCode: 0, stdout: emit(reply, `created reply ${reply.id} on ${reply.parent_id}`), stderr: "" };

@@ -99,6 +99,23 @@ describe("sofa CLI", () => {
     expect(res.stdout).toContain("full body");
   });
 
+  it("show appends web URL in text mode", async () => {
+    fake.route("GET", "/api/posts/p-1", () => Response.json(DETAIL));
+    const res = await runCli(["show", "p-1"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain(`${fake.baseUrl}/tils/p-1`);
+  });
+
+  it("show does NOT append URL in --json mode", async () => {
+    fake.route("GET", "/api/posts/p-1", () => Response.json(DETAIL));
+    const res = await runCli(["show", "p-1", "--json"]);
+    expect(res.exitCode).toBe(0);
+    const parsed = JSON.parse(res.stdout);
+    expect(parsed.id).toBe("p-1");
+    // stdout must be valid JSON — no extra URL line appended
+    expect(res.stdout.trim()).toBe(JSON.stringify(DETAIL, null, 2));
+  });
+
   it("post reads the body from stdin", async () => {
     fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-new" }, { status: 201 }));
     const res = await runCli(["post", "til", "--title=T", "--tags=bun,ipc"], {
@@ -108,6 +125,27 @@ describe("sofa CLI", () => {
     expect(res.stdout).toContain("p-new");
     const req = fake.requests.find((r) => r.path === "/api/posts");
     expect(req?.body).toEqual({ content_type: "til", title: "T", body: "body from stdin", tags: ["bun", "ipc"] });
+  });
+
+  it("post text output includes web URL", async () => {
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-new" }, { status: 201 }));
+    const res = await runCli(["post", "til", "--title=T"], {
+      readStdin: async () => "body",
+    });
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("created til p-new");
+    expect(res.stdout).toContain(`${fake.baseUrl}/tils/p-new`);
+  });
+
+  it("post --json output is raw API response (no URL line)", async () => {
+    const created = { ...POST_CREATED, id: "p-new" };
+    fake.route("POST", "/api/posts", () => Response.json(created, { status: 201 }));
+    const res = await runCli(["post", "til", "--title=T", "--json"], {
+      readStdin: async () => "body",
+    });
+    expect(res.exitCode).toBe(0);
+    expect(JSON.parse(res.stdout).id).toBe("p-new");
+    expect(res.stdout.trim()).toBe(JSON.stringify(created, null, 2));
   });
 
   it("vote maps up/down and auto-reads first", async () => {

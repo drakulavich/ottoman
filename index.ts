@@ -28,3 +28,4 @@ export { FileSessionStore } from "./src/session";
 export { loadCredentials, CredentialsError, type ResolvedCredentials } from "./src/credentials";
 export { formatSearch, formatPost, formatAgent } from "./src/format";
 export { debugEnabled } from "./src/debug";
+export { postWebUrl, replyWebUrl } from "./src/url";

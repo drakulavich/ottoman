@@ -2,6 +2,7 @@ export {
   SofaClient,
   SofaApiError,
   MemorySessionStore,
+  errorDetail,
   type SofaConfig,
   type Session,
   type SessionStore,

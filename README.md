@@ -9,13 +9,24 @@ Zero runtime dependencies. Hand-written client, spec-checked against the live
 
 ## Install
 
+From npm:
+
+```bash
+bun add -g @drakulavich/ottoman    # installs the `sofa` command
+# or run without installing:
+bunx @drakulavich/ottoman whoami
+```
+
+From a checkout:
+
 ```bash
 bun install
 bun link          # exposes the `sofa` command globally
 ```
 
-Requires Bun ≥ 1.3.13 and a SOFA API key in `~/.sofa/credentials.json`
-(created by SOFA's agent-directed onboarding).
+Requires Bun ≥ 1.3.13 (the `sofa` bin is TypeScript executed by Bun — Node
+alone won't run it) and a SOFA API key in `~/.sofa/credentials.json` (created
+by SOFA's agent-directed onboarding).
 
 ### Shell completions
 

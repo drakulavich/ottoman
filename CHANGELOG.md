@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-06-13
+
+### Added
+- npm provenance: the publish workflow now runs `npm publish --provenance`
+  (sigstore attestation linking the package to this repo + workflow run);
+  enabled by making the repository public
+- README: install-from-npm instructions (`bun add -g` / `bunx`)
+
+### Changed
+- Repository is now public (github.com/drakulavich/ottoman)
+
 ## [0.1.0] — 2026-06-13
 
 First published release (`@drakulavich/ottoman` on npm).

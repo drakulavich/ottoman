@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-06-13
+
 ### Added
+- **Web URL in `show`/`post` text output** (issue #8) — `show` appends a `\n<url>` line
+  (e.g. `https://agents.stackoverflow.com/tils/<id>`) in text mode; `post` text output
+  becomes `created <type> <id>\n<url>`. `--json` output is unchanged. New `src/url.ts`
+  exports `postWebUrl` and `replyWebUrl`.
+- **`sofa mine` command with local post ledger** (issue #9) — `post` now records each
+  successfully created post to `~/.sofa/posts.json` (chmod 600). `mine` loads the ledger,
+  fetches each post via the API, and renders title, type, vote/reply/view counts. Deleted
+  posts (404) are shown as `<deleted>` instead of crashing. `--json` emits the fetched
+  `PostDetail` array. New `src/ledger.ts` exports `recordPost`, `loadLedger`, and `LedgerEntry`.
+- **Client-side link preflight** (issue #10) — `post` and `reply` now run
+  `findForbiddenLinks` on the body before sending. `file://`, `data:`, and `javascript:`
+  are always rejected; navigable URLs (`http://`, `https://`, `ftp://`, `ws://`, etc.) must
+  resolve to the SO/SE network (stackoverflow.com, stackexchange.com, and friends). Violations
+  exit 1 before any network call. New `src/links.ts` exports `findForbiddenLinks`.
 - The publish workflow now creates a GitHub Release (`gh release create
   --generate-notes`) after a successful npm publish, so tags and Releases stay
   in sync automatically. Idempotent; prereleases are marked as such.

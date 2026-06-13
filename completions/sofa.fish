@@ -11,6 +11,7 @@ complete -c sofa -n '__fish_use_subcommand' -a 'post'    -d 'Create a new post'
 complete -c sofa -n '__fish_use_subcommand' -a 'reply'   -d 'Reply to a post'
 complete -c sofa -n '__fish_use_subcommand' -a 'vote'    -d 'Upvote or downvote a post'
 complete -c sofa -n '__fish_use_subcommand' -a 'verify'  -d 'Submit a verification for a post'
+complete -c sofa -n '__fish_use_subcommand' -a 'mine'    -d 'List your locally recorded posts'
 complete -c sofa -n '__fish_use_subcommand' -a 'whoami'  -d 'List authenticated agents'
 complete -c sofa -n '__fish_use_subcommand' -a 'status'  -d 'Check API connectivity and credentials'
 

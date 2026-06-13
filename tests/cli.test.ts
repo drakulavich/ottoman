@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it } from "bun:test";
-import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runCli, parseArgs } from "../src/cli";
 import { startFakeSofa, type FakeSofa } from "./fake-sofa";
@@ -99,6 +99,23 @@ describe("sofa CLI", () => {
     expect(res.stdout).toContain("full body");
   });
 
+  it("show appends web URL in text mode", async () => {
+    fake.route("GET", "/api/posts/p-1", () => Response.json(DETAIL));
+    const res = await runCli(["show", "p-1"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain(`${fake.baseUrl}/tils/p-1`);
+  });
+
+  it("show does NOT append URL in --json mode", async () => {
+    fake.route("GET", "/api/posts/p-1", () => Response.json(DETAIL));
+    const res = await runCli(["show", "p-1", "--json"]);
+    expect(res.exitCode).toBe(0);
+    const parsed = JSON.parse(res.stdout);
+    expect(parsed.id).toBe("p-1");
+    // stdout must be valid JSON — no extra URL line appended
+    expect(res.stdout.trim()).toBe(JSON.stringify(DETAIL, null, 2));
+  });
+
   it("post reads the body from stdin", async () => {
     fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-new" }, { status: 201 }));
     const res = await runCli(["post", "til", "--title=T", "--tags=bun,ipc"], {
@@ -108,6 +125,27 @@ describe("sofa CLI", () => {
     expect(res.stdout).toContain("p-new");
     const req = fake.requests.find((r) => r.path === "/api/posts");
     expect(req?.body).toEqual({ content_type: "til", title: "T", body: "body from stdin", tags: ["bun", "ipc"] });
+  });
+
+  it("post text output includes web URL", async () => {
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-new" }, { status: 201 }));
+    const res = await runCli(["post", "til", "--title=T"], {
+      readStdin: async () => "body",
+    });
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("created til p-new");
+    expect(res.stdout).toContain(`${fake.baseUrl}/tils/p-new`);
+  });
+
+  it("post --json output is raw API response (no URL line)", async () => {
+    const created = { ...POST_CREATED, id: "p-new" };
+    fake.route("POST", "/api/posts", () => Response.json(created, { status: 201 }));
+    const res = await runCli(["post", "til", "--title=T", "--json"], {
+      readStdin: async () => "body",
+    });
+    expect(res.exitCode).toBe(0);
+    expect(JSON.parse(res.stdout).id).toBe("p-new");
+    expect(res.stdout.trim()).toBe(JSON.stringify(created, null, 2));
   });
 
   it("vote maps up/down and auto-reads first", async () => {
@@ -190,5 +228,117 @@ describe("sofa CLI", () => {
     expect(res.exitCode).toBe(0);
     const req = fake.requests.find((r) => r.path === "/api/posts");
     expect(req?.body).toEqual({ content_type: "til", title: "T", body: "body", tags: ["bun"] });
+  });
+
+  it("post records entry to ledger", async () => {
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-ledger" }, { status: 201 }));
+    const res = await runCli(["post", "til", "--title=LedgerTitle"], {
+      readStdin: async () => "body",
+    });
+    expect(res.exitCode).toBe(0);
+    const ledgerFile = join(getTmpHome(), ".sofa", "posts.json");
+    expect(existsSync(ledgerFile)).toBe(true);
+    const ledger = JSON.parse(readFileSync(ledgerFile, "utf8")) as Array<{ id: string }>;
+    expect(ledger.some((e) => e.id === "p-ledger")).toBe(true);
+  });
+
+  it("mine lists recorded posts", async () => {
+    // Set up two posts in the ledger and route getPost for each
+    fake.route("GET", "/api/posts/p-m1", () =>
+      Response.json({ ...DETAIL, id: "p-m1", title: "Mine Post One", content_type: "til" }),
+    );
+    fake.route("GET", "/api/posts/p-m2", () =>
+      Response.json({ ...DETAIL, id: "p-m2", title: "Mine Post Two", content_type: "question" }),
+    );
+    // First create two posts to populate the ledger
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-m1", content_type: "til", title: "Mine Post One" }, { status: 201 }));
+    await runCli(["post", "til", "--title=Mine Post One"], { readStdin: async () => "body" });
+    // Reroute POST for second post
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-m2", content_type: "question", title: "Mine Post Two" }, { status: 201 }));
+    await runCli(["post", "question", "--title=Mine Post Two"], { readStdin: async () => "body" });
+
+    const res = await runCli(["mine"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("Mine Post One");
+    expect(res.stdout).toContain("Mine Post Two");
+  });
+
+  it("mine shows <deleted> for 404 entries and still lists others", async () => {
+    fake.route("GET", "/api/posts/p-alive", () =>
+      Response.json({ ...DETAIL, id: "p-alive", title: "Alive Post" }),
+    );
+    fake.route("GET", "/api/posts/p-dead", () =>
+      Response.json({ error: "not found" }, { status: 404 }),
+    );
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-alive", title: "Alive Post" }, { status: 201 }));
+    await runCli(["post", "til", "--title=Alive Post"], { readStdin: async () => "body" });
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-dead", title: "Dead Post" }, { status: 201 }));
+    await runCli(["post", "til", "--title=Dead Post"], { readStdin: async () => "body" });
+
+    const res = await runCli(["mine"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("Alive Post");
+    expect(res.stdout).toContain("<deleted>");
+  });
+
+  it("mine empty ledger shows message", async () => {
+    const res = await runCli(["mine"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("no posts recorded yet");
+  });
+
+  it("ledger failure does not mask successful post (exit 0, warning on stderr)", async () => {
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-ledger-fail" }, { status: 201 }));
+    // Block the ledger write: make posts.json a directory so Bun.write throws.
+    // Credentials in .sofa/credentials.json are already written by beforeEach and remain intact.
+    mkdirSync(join(getTmpHome(), ".sofa", "posts.json"), { recursive: true });
+    const res = await runCli(["post", "til", "--title=T"], {
+      readStdin: async () => "body",
+    });
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("created");
+    expect(res.stdout).toContain("p-ledger-fail");
+    expect(res.stderr).toContain("warning");
+  });
+
+  it("post with file:// body exits 1 and does not hit server", async () => {
+    const res = await runCli(["post", "til", "--title=T"], {
+      readStdin: async () => "see file:///etc/passwd for details",
+    });
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("file://");
+    // No POST request should have been made
+    const postReq = fake.requests.find((r) => r.path === "/api/posts" && r.method === "POST");
+    expect(postReq).toBeUndefined();
+  });
+
+  it("reply with off-network link exits 1 and does not hit server", async () => {
+    const res = await runCli(["reply", "p-1"], {
+      readStdin: async () => "check https://evil.example.com/x for info",
+    });
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("evil.example.com");
+  });
+
+  it("post with allowed SO link succeeds", async () => {
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-ok" }, { status: 201 }));
+    const res = await runCli(["post", "til", "--title=T"], {
+      readStdin: async () => "see https://stackoverflow.com/q/123 for details",
+    });
+    expect(res.exitCode).toBe(0);
+  });
+
+  it("mine --json returns array of fetched posts", async () => {
+    fake.route("GET", "/api/posts/p-j1", () =>
+      Response.json({ ...DETAIL, id: "p-j1", title: "JSON Mine" }),
+    );
+    fake.route("POST", "/api/posts", () => Response.json({ ...POST_CREATED, id: "p-j1", title: "JSON Mine" }, { status: 201 }));
+    await runCli(["post", "til", "--title=JSON Mine"], { readStdin: async () => "body" });
+
+    const res = await runCli(["mine", "--json"]);
+    expect(res.exitCode).toBe(0);
+    const arr = JSON.parse(res.stdout) as Array<{ id: string }>;
+    expect(Array.isArray(arr)).toBe(true);
+    expect(arr.some((p) => p.id === "p-j1")).toBe(true);
   });
 });

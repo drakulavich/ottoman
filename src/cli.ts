@@ -9,8 +9,11 @@ import {
 } from "./client";
 import { loadCredentials, CredentialsError } from "./credentials";
 import { FileSessionStore } from "./session";
-import { formatAgent, formatPost, formatSearch } from "./format";
+import { formatAgent, formatMine, formatPost, formatSearch, type MineLine } from "./format";
 import { makeDebugLogger } from "./debug";
+import { postWebUrl } from "./url";
+import { loadLedger, recordPost } from "./ledger";
+import { findForbiddenLinks } from "./links";
 
 const USAGE = `usage: sofa <command> [args]
 
@@ -20,6 +23,7 @@ const USAGE = `usage: sofa <command> [args]
   reply <post-id> [--body-file=f | stdin]
   vote <post-id> <up|down>
   verify <post-id> <worked|changed|failed> --feedback="..."
+  mine
   whoami
   status
 
@@ -134,22 +138,34 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         if (!postId) throw new UserError("usage: sofa show <post-id>");
         const client = await makeClient(agentId);
         const post = await client.getPost(postId);
-        return { exitCode: 0, stdout: emit(post, formatPost(post)), stderr: "" };
+        const webUrl = postWebUrl(client.baseUrl, post.content_type, post.id);
+        return { exitCode: 0, stdout: emit(post, `${formatPost(post)}\n${webUrl}`), stderr: "" };
       }
       case "post": {
         const [type] = positionals;
         if (!type || !TYPES.has(type)) throw new UserError("usage: sofa post <til|question|blueprint> --title=...");
         if (typeof flags.title !== "string" || flags.title.trim() === "") throw new UserError("post requires --title=\"...\"");
         const body = await readBody(flags, readStdin);
+        const violations = findForbiddenLinks(body);
+        if (violations.length > 0) throw new UserError(`post body has links SOFA will reject:\n  - ${violations.join("\n  - ")}`);
         const tags = typeof flags.tags === "string" ? flags.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
         const client = await makeClient(agentId);
         const post = await client.createPost({ content_type: type as ContentType, title: flags.title, body, tags });
-        return { exitCode: 0, stdout: emit(post, `created ${post.content_type} ${post.id}`), stderr: "" };
+        let ledgerWarning = "";
+        try {
+          await recordPost({ id: post.id, content_type: post.content_type, title: post.title, created_at: post.created_at });
+        } catch (err) {
+          ledgerWarning = `warning: could not record post to local ledger: ${err instanceof Error ? err.message : String(err)}`;
+        }
+        const webUrl = postWebUrl(client.baseUrl, post.content_type, post.id);
+        return { exitCode: 0, stdout: emit(post, `created ${post.content_type} ${post.id}\n${webUrl}`), stderr: ledgerWarning };
       }
       case "reply": {
         const [postId] = positionals;
         if (!postId) throw new UserError("usage: sofa reply <post-id>");
         const body = await readBody(flags, readStdin);
+        const violations = findForbiddenLinks(body);
+        if (violations.length > 0) throw new UserError(`post body has links SOFA will reject:\n  - ${violations.join("\n  - ")}`);
         const client = await makeClient(agentId);
         const reply = await client.reply(postId, body);
         return { exitCode: 0, stdout: emit(reply, `created reply ${reply.id} on ${reply.parent_id}`), stderr: "" };
@@ -183,6 +199,33 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const agents = await client.myAgents(); // exercises session + identity
         const status = { ready: true, agents: agents.items.length };
         return { exitCode: 0, stdout: emit(status, `SOFA status: ready (key present, session ok, ${agents.items.length} agent(s))`), stderr: "" };
+      }
+      case "mine": {
+        const entries = await loadLedger();
+        if (entries.length === 0) {
+          return { exitCode: 0, stdout: emit([], "no posts recorded yet"), stderr: "" };
+        }
+        const client = await makeClient(agentId);
+        type MineResult = { kind: "found"; post: import("./client").PostDetail } | { kind: "deleted"; entry: typeof entries[number] };
+        const results = await Promise.all(
+          entries.map(async (entry): Promise<MineResult> => {
+            try {
+              return { kind: "found", post: await client.getPost(entry.id) };
+            } catch (err) {
+              if (err instanceof SofaApiError && err.status === 404) {
+                return { kind: "deleted", entry };
+              }
+              throw err;
+            }
+          }),
+        );
+        const lines: MineLine[] = results.map((r) =>
+          r.kind === "found"
+            ? { id: r.post.id, title: r.post.title, content_type: r.post.content_type, vote_count: r.post.vote_count, reply_count: r.post.reply_count, view_count: r.post.view_count, trust_summary: r.post.trust_summary }
+            : { id: r.entry.id, title: r.entry.title, content_type: r.entry.content_type, reply_count: 0, view_count: 0, trust_summary: null, deleted: true },
+        );
+        const fetched = results.filter((r): r is Extract<MineResult, { kind: "found" }> => r.kind === "found").map((r) => r.post);
+        return { exitCode: 0, stdout: emit(fetched, formatMine(lines)), stderr: "" };
       }
       default:
         throw new UserError(USAGE);

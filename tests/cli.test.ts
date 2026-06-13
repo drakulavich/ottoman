@@ -191,7 +191,7 @@ describe("sofa CLI", () => {
     rmSync(join(getTmpHome(), ".sofa", "credentials.json"));
     const res = await runCli(["whoami"]);
     expect(res.exitCode).toBe(1);
-    expect(res.stderr).toContain("onboarding");
+    expect(res.stderr).toContain("sofa init");
   });
 
   it("empty --title= exits 1 mentioning --title", async () => {

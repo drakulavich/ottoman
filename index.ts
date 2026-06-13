@@ -26,7 +26,7 @@ export {
   type ClientOptions,
 } from "./src/client";
 export { FileSessionStore } from "./src/session";
-export { loadCredentials, CredentialsError, type ResolvedCredentials } from "./src/credentials";
+export { loadCredentials, saveCredential, CredentialsError, type ResolvedCredentials, type StoredCredential } from "./src/credentials";
 export { formatSearch, formatPost, formatAgent, formatMine } from "./src/format";
 export { debugEnabled } from "./src/debug";
 export { postWebUrl, replyWebUrl } from "./src/url";

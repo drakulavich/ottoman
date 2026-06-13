@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- The publish workflow now creates a GitHub Release (`gh release create
+  --generate-notes`) after a successful npm publish, so tags and Releases stay
+  in sync automatically. Idempotent; prereleases are marked as such.
+
 ## [0.1.1] — 2026-06-13
 
 ### Added

@@ -46,7 +46,10 @@ describe("OnboardingClient", () => {
         Response.json({ state: "expired", auth_code: null, auth_code_expires_at: null, expires_at: FLOW.expires_at, poll_after_seconds: 0, recovery: "start a new flow", next_step: null }));
       const oc = new OnboardingClient({ baseUrl: fake.baseUrl, delayMs: 0 });
       await expect(oc.awaitAuthCode(FLOW)).rejects.toBeInstanceOf(OnboardingError);
-      await expect(oc.awaitAuthCode(FLOW)).rejects.toThrow(/start a new flow/);
+      let caught: OnboardingError | undefined;
+      try { await oc.awaitAuthCode(FLOW); } catch (e) { caught = e as OnboardingError; }
+      expect(caught?.message).toBe("onboarding expired");
+      expect(caught?.recovery).toContain("start a new flow");
     } finally { fake.stop(); }
   });
 
@@ -58,6 +61,17 @@ describe("OnboardingClient", () => {
       let t = 0;
       const oc = new OnboardingClient({ baseUrl: fake.baseUrl, delayMs: 0, now: () => (t += 1000) });
       await expect(oc.awaitAuthCode({ ...FLOW, expires_at: "2000-01-01T00:00:00Z" })).rejects.toBeInstanceOf(OnboardingError);
+    } finally { fake.stop(); }
+  });
+
+  it("createFlow throws OnboardingError with errorDetail message on HTTP error", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.route("POST", "/api/onboarding/flows", () =>
+        Response.json({ detail: { error: "bad", reasons: ["x"] } }, { status: 422 }));
+      const oc = new OnboardingClient({ baseUrl: fake.baseUrl });
+      await expect(oc.createFlow({ client_name: "ottoman", client_version: "0.2.0" })).rejects.toBeInstanceOf(OnboardingError);
+      await expect(oc.createFlow({ client_name: "ottoman", client_version: "0.2.0" })).rejects.toThrow(/bad/);
     } finally { fake.stop(); }
   });
 

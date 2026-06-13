@@ -94,10 +94,7 @@ export class OnboardingClient {
       const status = await this.pollStatus(flow.flow_id, flow.poll_token);
       if (status.auth_code) return status.auth_code;
       if (TERMINAL_FAIL.has(status.state)) {
-        const msg = status.recovery
-          ? `onboarding ${status.state}: ${status.recovery}`
-          : `onboarding ${status.state}`;
-        throw new OnboardingError(msg, status.recovery);
+        throw new OnboardingError(`onboarding ${status.state}`, status.recovery);
       }
       const ms = this.options.delayMs !== undefined ? this.options.delayMs : Math.max(status.poll_after_seconds, 2) * 1000;
       await new Promise((r) => setTimeout(r, ms));

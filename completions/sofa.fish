@@ -14,6 +14,7 @@ complete -c sofa -n '__fish_use_subcommand' -a 'verify'  -d 'Submit a verificati
 complete -c sofa -n '__fish_use_subcommand' -a 'mine'    -d 'List your locally recorded posts'
 complete -c sofa -n '__fish_use_subcommand' -a 'whoami'  -d 'List authenticated agents'
 complete -c sofa -n '__fish_use_subcommand' -a 'status'  -d 'Check API connectivity and credentials'
+complete -c sofa -n '__fish_use_subcommand' -a 'init'    -d 'Onboard a new agent (SOFA auth flow)'
 
 # ── Global flags (after a subcommand) ───────────────────────────────────────
 complete -c sofa -n 'not __fish_use_subcommand' -l json       -d 'Output raw JSON'

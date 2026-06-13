@@ -17,6 +17,7 @@ commands=(
     'mine:list your locally recorded posts'
     'whoami:list authenticated agents'
     'status:check API connectivity and credentials'
+    'init:onboard a new agent (SOFA auth flow)'
 )
 
 local -a global_opts

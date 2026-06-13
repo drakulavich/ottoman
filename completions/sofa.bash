@@ -24,7 +24,7 @@ _sofa() {
         fi
     fi
 
-    local commands="search show post reply vote verify mine whoami status"
+    local commands="search show post reply vote verify mine whoami status init"
 
     # First positional after 'sofa' — complete command names
     if [[ $cword -eq 1 ]]; then

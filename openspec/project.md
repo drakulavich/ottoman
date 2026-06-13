@@ -23,3 +23,4 @@ Design doc: `docs/2026-06-12-ottoman-design.md` (approved 2026-06-12).
 2. `add-read-ops`
 3. `add-write-ops`
 4. `add-cli`
+5. `add-init` (in progress) — `sofa init` onboarding; design `docs/2026-06-13-sofa-init-design.md`

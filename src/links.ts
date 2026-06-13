@@ -28,9 +28,33 @@ const DANGEROUS_SCHEMES = /^(file|data|javascript):/i;
 // Navigable URL schemes that require an allowlist check.
 const NAVIGABLE_SCHEME = /^(https?|ftps?|sftp|wss?):/i;
 
-// Regex to find scheme:// or scheme: occurrences in text.
+// Regex to find scheme: occurrences in text.
 // Matches scheme: followed by anything that looks like a URL (no whitespace, no closing paren/bracket).
 const URL_PATTERN = /([a-zA-Z][a-zA-Z0-9+\-.]*):(?:\/\/)?([^\s)>\]"]*)/g;
+
+/**
+ * Extract the true hostname from a navigable URL string using the URL constructor,
+ * which correctly handles userinfo (user:pass@host), ports, and IDN/punycode.
+ * Falls back to regex extraction when the URL constructor throws (e.g. non-http schemes
+ * like ftp:// that older environments may reject).
+ */
+function extractHost(scheme: string, rest: string): string {
+  // Normalise to https:// so the URL constructor always accepts it
+  const normalised = `https://${rest.replace(/^\/\//, "")}`;
+  try {
+    return new URL(normalised).hostname;
+  } catch {
+    // Fallback: strip userinfo then port from the authority segment
+    let authority = rest.replace(/^\/\//, "");
+    // Trim path/query/fragment
+    const pathIdx = authority.search(/[/?#]/);
+    if (pathIdx !== -1) authority = authority.slice(0, pathIdx);
+    // Strip userinfo (everything up to and including the last @)
+    if (authority.includes("@")) authority = authority.slice(authority.lastIndexOf("@") + 1);
+    // Strip port
+    return authority.split(":")[0];
+  }
+}
 
 export function findForbiddenLinks(text: string): string[] {
   const violations: string[] = [];
@@ -42,25 +66,16 @@ export function findForbiddenLinks(text: string): string[] {
     const scheme = match[1];
     const rest = match[2];
 
-    // Skip scheme-less bare words (e.g. "requirements.txt" — no colon)
-    // URL_PATTERN requires a colon, so we only get here for real scheme: matches.
-
     if (DANGEROUS_SCHEMES.test(`${scheme}:`)) {
-      violations.push(`${scheme.toLowerCase()}:// URLs are not allowed (SOFA rejects them): ${full}`);
+      // Use scheme: (not scheme://) — data: and javascript: have no // prefix
+      violations.push(`${scheme.toLowerCase()}: URLs are not allowed (SOFA rejects them): ${full}`);
       continue;
     }
 
     if (NAVIGABLE_SCHEME.test(`${scheme}:`)) {
-      // Extract host from rest (rest starts after scheme:// or scheme:)
-      // For scheme://host/path, rest = //host/path or host/path
-      let hostPart = rest.replace(/^\/\//, "");
-      // Take up to the first / or end
-      const slashIdx = hostPart.indexOf("/");
-      const host = slashIdx === -1 ? hostPart : hostPart.slice(0, slashIdx);
-      // Remove port if present
-      const bareHost = host.split(":")[0];
+      const host = extractHost(scheme, rest);
 
-      if (!isAllowedHost(bareHost)) {
+      if (!isAllowedHost(host)) {
         violations.push(
           `off-network link not allowed: ${scheme.toLowerCase()}://${rest.replace(/^\/\//, "")} (only Stack Overflow / Stack Exchange hosts permitted)`,
         );

@@ -51,4 +51,16 @@ describe("recordPost", () => {
     const mode = statSync(path).mode & 0o777;
     expect(mode).toBe(0o600);
   });
+
+  it("ledger file contains valid JSON after record (atomic write safety)", async () => {
+    await recordPost({ id: "p-1", content_type: "til", title: "Atomic", created_at: "2026-06-12T12:00:00Z" });
+    const path = join(getTmpHome(), ".sofa", "posts.json");
+    const raw = require("node:fs").readFileSync(path, "utf8");
+    // Must parse cleanly — no partial/truncated write
+    const parsed = JSON.parse(raw) as unknown[];
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed).toHaveLength(1);
+    // No temp file left behind
+    expect(require("node:fs").existsSync(path + ".tmp")).toBe(false);
+  });
 });

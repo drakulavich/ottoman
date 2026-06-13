@@ -57,13 +57,17 @@ describe("findForbiddenLinks — forbidden URLs", () => {
   it("rejects data: URL", () => {
     const violations = findForbiddenLinks("data:text/html,<h1>hi</h1>");
     expect(violations.length).toBeGreaterThan(0);
+    // message uses scheme: not scheme:// (data has no //)
     expect(violations[0]).toContain("data:");
+    expect(violations[0]).not.toContain("data://");
   });
 
   it("rejects javascript: URL", () => {
     const violations = findForbiddenLinks("javascript:alert(1)");
     expect(violations.length).toBeGreaterThan(0);
+    // message uses scheme: not scheme:// (javascript has no //)
     expect(violations[0]).toContain("javascript:");
+    expect(violations[0]).not.toContain("javascript://");
   });
 
   it("case-insensitive: FILE:// is rejected", () => {
@@ -102,5 +106,30 @@ describe("findForbiddenLinks — forbidden URLs", () => {
     const [msg] = findForbiddenLinks("https://evil.example.com");
     expect(msg).toContain("off-network");
     expect(msg).toContain("evil.example.com");
+  });
+
+  // CRITICAL: userinfo-with-colon bypass — browser navigates to evil.com, not stackoverflow.com
+  it("rejects userinfo bypass: https://stackoverflow.com:tok@evil.com/x", () => {
+    const violations = findForbiddenLinks("https://stackoverflow.com:tok@evil.com/x");
+    expect(violations.length).toBeGreaterThan(0);
+    expect(violations[0]).toContain("evil.com");
+  });
+
+  it("rejects userinfo bypass with port: https://stackoverflow.com:443@evil.com/x", () => {
+    const violations = findForbiddenLinks("https://stackoverflow.com:443@evil.com/x");
+    expect(violations.length).toBeGreaterThan(0);
+    expect(violations[0]).toContain("evil.com");
+  });
+
+  it("rejects userinfo bypass with subdomain: https://foo.stackoverflow.com:9@evil.com", () => {
+    const violations = findForbiddenLinks("https://foo.stackoverflow.com:9@evil.com");
+    expect(violations.length).toBeGreaterThan(0);
+    expect(violations[0]).toContain("evil.com");
+  });
+
+  it("rejects Cyrillic-homograph host (punycode-normalised via URL constructor)", () => {
+    // Cyrillic 'а' (U+0430) looks like Latin 'a' but is a different host
+    const violations = findForbiddenLinks("https://stаckoverflow.com/q/1");
+    expect(violations.length).toBeGreaterThan(0);
   });
 });

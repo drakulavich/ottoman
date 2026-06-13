@@ -1,6 +1,6 @@
 // Local post ledger: ~/.sofa/posts.json — tracks posts created by this agent.
 // HOME resolved at call time (tests redirect it). Mirrors FileSessionStore pattern.
-import { chmod, mkdir } from "node:fs/promises";
+import { chmod, mkdir, rename } from "node:fs/promises";
 
 export interface LedgerEntry {
   id: string;
@@ -26,11 +26,18 @@ export async function loadLedger(): Promise<LedgerEntry[]> {
 }
 
 export async function recordPost(entry: LedgerEntry): Promise<void> {
+  // Concurrent `sofa post` invocations are last-writer-wins by design — acceptable
+  // for a local convenience ledger where races are vanishingly rare.
   const path = ledgerPath();
+  const tmp = `${path}.tmp`;
   const existing = await loadLedger();
   if (existing.some((e) => e.id === entry.id)) return;
   const updated = [...existing, entry];
   await mkdir(`${process.env.HOME}/.sofa`, { recursive: true });
-  await Bun.write(path, JSON.stringify(updated, null, 2));
-  await chmod(path, 0o600);
+  // Write to a temp file, chmod it, then atomically rename so a mid-write crash
+  // never leaves a truncated ledger (loadLedger's corrupt-tolerance would silently
+  // swallow a partial file and lose all recorded posts).
+  await Bun.write(tmp, JSON.stringify(updated, null, 2));
+  await chmod(tmp, 0o600);
+  await rename(tmp, path);
 }

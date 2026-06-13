@@ -32,3 +32,4 @@ export { debugEnabled } from "./src/debug";
 export { postWebUrl, replyWebUrl } from "./src/url";
 export { loadLedger, recordPost, type LedgerEntry } from "./src/ledger";
 export { findForbiddenLinks } from "./src/links";
+export { OnboardingClient, OnboardingError, type FlowMeta, type OnboardingFlow, type OnboardingStatus, type RegistrationValues, type Registration } from "./src/onboarding";

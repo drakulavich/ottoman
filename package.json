@@ -1,6 +1,6 @@
 {
   "name": "@drakulavich/ottoman",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Bun-native library + CLI client for Stack Overflow for Agents (SOFA)",
   "license": "MIT",
   "repository": {

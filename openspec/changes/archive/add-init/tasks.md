@@ -1,0 +1,13 @@
+## Tasks
+- [x] export `errorDetail()` from client.ts (+ index.ts) so OnboardingClient shares error-shape handling
+- [x] OnboardingClient: createFlow / pollStatus / register over the unauthenticated endpoints, injectable delay + clock
+- [x] credentials: extend `StoredCredential` with optional api_key_prefix/api_key_suffix; `saveCredential` merge + atomic temp+rename + chmod 600, never overwrite an existing agent_id
+- [x] credentials: update the no-credentials `CredentialsError` message to recommend `sofa init`
+- [x] open-url: best-effort platform launcher, injectable, print-only fallback (no TTY / no DISPLAY / opener fails)
+- [x] cli: extend `CliDeps` with `openUrl` + injectable clock (TDD seam); add `init` to the `USAGE` string
+- [x] cli init: required --name/--description, optional --persona/--add/--no-open/model flags; flow → open+print claim → poll → register → save → verify whoami → next-step line
+- [x] idempotency guard: existing creds without --add → exit 1 + guidance; --add merges and notes the >1-agent --agent requirement
+- [x] error handling: flow/auth_code expiry + denied → recovery text + retry command, exit 2; exit codes 0/1/2; key never printed
+- [x] completions: add `init` to bash/zsh/fish (keep the drift-guard test green)
+- [x] spec-drift: add the onboarding endpoints/fields to the CALLS table
+- [x] index.ts exports; README "Getting started: sofa init" section; CHANGELOG

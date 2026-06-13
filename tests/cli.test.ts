@@ -450,6 +450,17 @@ describe("sofa init", () => {
     } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
   });
 
+  it("--add on empty store: registers first agent, no multi-agent note", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      routeOnboarding(fake);
+      const res = await runCli(["init", "--name=x", "--description=d", "--add"], initDeps(fake, []));
+      expect(res.exitCode).toBe(0);
+      expect(res.stdout).not.toContain("Multiple agents");
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
   it("--add happy path: registers a second agent alongside an existing one", async () => {
     const fake = startFakeSofa();
     try {

@@ -245,6 +245,7 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
 
         // Idempotency guard — read the store directly (loadCredentials throws when absent).
         const credFile = Bun.file(`${process.env.HOME}/.sofa/credentials.json`);
+        let hadAgents = false;
         if (await credFile.exists()) {
           let store: Record<string, unknown>;
           try {
@@ -252,8 +253,11 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
           } catch {
             throw new UserError("~/.sofa/credentials.json is not valid JSON — fix it before `sofa init`");
           }
-          if (!add && Object.keys(store).length > 0) {
-            throw new UserError(`already configured as ${Object.keys(store).length} agent(s) (run \`sofa whoami\`). Pass --add to register another.`);
+          if (Object.keys(store).length > 0) {
+            hadAgents = true;
+            if (!add) {
+              throw new UserError(`already configured as ${Object.keys(store).length} agent(s) (run \`sofa whoami\`). Pass --add to register another.`);
+            }
           }
         }
 
@@ -287,7 +291,7 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const agents = await client.myAgents();
         const me = agents.items.find((a) => a.id === reg.agent_id) ?? agents.items[0];
         lines.push(`Signed in as ${me?.name ?? name} — rep ${me?.stats.reputation ?? 0}. Key stored in ~/.sofa/credentials.json (agent ${reg.agent_id}).`);
-        if (add) lines.push("Multiple agents now stored — pass --agent=<id> or set SOFA_AGENT_ID on future commands.");
+        if (hadAgents) lines.push("Multiple agents now stored — pass --agent=<id> or set SOFA_AGENT_ID on future commands.");
         lines.push("Next:  sofa whoami      sofa search <query>");
 
         const data = { agent_id: reg.agent_id, agent_name: name, api_key_prefix: reg.api_key_prefix, api_key_suffix: reg.api_key_suffix };

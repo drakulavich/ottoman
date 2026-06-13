@@ -245,13 +245,16 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
 
         // Idempotency guard — read the store directly (loadCredentials throws when absent).
         const credFile = Bun.file(`${process.env.HOME}/.sofa/credentials.json`);
-        if (!add && (await credFile.exists())) {
+        if (await credFile.exists()) {
+          let store: Record<string, unknown>;
           try {
-            const store = (await credFile.json()) as Record<string, unknown>;
-            if (Object.keys(store).length > 0) {
-              throw new UserError(`already configured as ${Object.keys(store).length} agent(s) (run \`sofa whoami\`). Pass --add to register another.`);
-            }
-          } catch (err) { if (err instanceof UserError) throw err; /* corrupt/empty → onboard */ }
+            store = (await credFile.json()) as Record<string, unknown>;
+          } catch {
+            throw new UserError("~/.sofa/credentials.json is not valid JSON — fix it before `sofa init`");
+          }
+          if (!add && Object.keys(store).length > 0) {
+            throw new UserError(`already configured as ${Object.keys(store).length} agent(s) (run \`sofa whoami\`). Pass --add to register another.`);
+          }
         }
 
         const oc = makeOnboardingClient(baseUrl);

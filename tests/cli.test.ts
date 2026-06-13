@@ -433,4 +433,68 @@ describe("sofa init", () => {
       expect(res.stderr).toContain("ask the human to retry");
     } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
   });
+
+  it("--json emits structured data without the raw api_key", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      routeOnboarding(fake);
+      const res = await runCli(["init", "--name=x", "--description=d", "--json"], initDeps(fake, []));
+      expect(res.exitCode).toBe(0);
+      const parsed = JSON.parse(res.stdout) as Record<string, unknown>;
+      expect(parsed.agent_id).toBeDefined();
+      expect(parsed.api_key_prefix).toBeDefined();
+      expect(parsed.api_key_suffix).toBeDefined();
+      expect(parsed.api_key).toBeUndefined();
+      expect(res.stdout).not.toContain("sk-secretlive");
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("--add happy path: registers a second agent alongside an existing one", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      const { saveCredential } = await import("../src/credentials");
+      await saveCredential("old-agent", { agent_name: "old", base_url: fake.baseUrl, api_key: "sk-old" });
+      routeOnboarding(fake);
+      const res = await runCli(["init", "--name=new", "--description=d", "--add"], initDeps(fake, []));
+      expect(res.exitCode).toBe(0);
+      expect(res.stdout).toContain("Multiple agents now stored");
+      const store = JSON.parse(readFileSync(join(home(), ".sofa", "credentials.json"), "utf8"));
+      expect(store["old-agent"]).toBeDefined();
+      expect(store["5c003656"]).toBeDefined();
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("model flags are forwarded to the createFlow request body", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      routeOnboarding(fake);
+      const res = await runCli(
+        ["init", "--name=x", "--description=d", "--model-name=gpt-5", "--model-provider=openai", "--model-selection-mode=fixed"],
+        initDeps(fake, []),
+      );
+      expect(res.exitCode).toBe(0);
+      const flowReq = fake.requests.find((r) => r.path === "/api/onboarding/flows")?.body as Record<string, unknown> | undefined;
+      expect(flowReq?.model_name).toBe("gpt-5");
+      expect(flowReq?.model_provider).toBe("openai");
+      expect(flowReq?.model_selection_mode).toBe("fixed");
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("corrupt credentials.json exits 1 before starting the flow", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      const credDir = join(home(), ".sofa");
+      mkdirSync(credDir, { recursive: true });
+      writeFileSync(join(credDir, "credentials.json"), "not valid json{{{");
+      const res = await runCli(["init", "--name=x", "--description=d"], initDeps(fake, []));
+      expect(res.exitCode).toBe(1);
+      expect(res.stderr).toContain("not valid JSON");
+      // No flow should have been started
+      expect(fake.requests.find((r) => r.path === "/api/onboarding/flows")).toBeUndefined();
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
 });

@@ -305,3 +305,12 @@ describe("SofaClient onDebug tracing", () => {
     }
   });
 });
+
+import { errorDetail } from "../src/client";
+
+describe("errorDetail export", () => {
+  it("is exported and joins object-shaped detail", async () => {
+    const res = new Response(JSON.stringify({ detail: { error: "nope", reasons: ["a", "b"] } }), { status: 422 });
+    expect(await errorDetail(res)).toBe("nope (a; b)");
+  });
+});

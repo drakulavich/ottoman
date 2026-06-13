@@ -2,6 +2,7 @@ export {
   SofaClient,
   SofaApiError,
   MemorySessionStore,
+  errorDetail,
   type SofaConfig,
   type Session,
   type SessionStore,
@@ -25,9 +26,10 @@ export {
   type ClientOptions,
 } from "./src/client";
 export { FileSessionStore } from "./src/session";
-export { loadCredentials, CredentialsError, type ResolvedCredentials } from "./src/credentials";
+export { loadCredentials, saveCredential, CredentialsError, type ResolvedCredentials, type StoredCredential } from "./src/credentials";
 export { formatSearch, formatPost, formatAgent, formatMine } from "./src/format";
 export { debugEnabled } from "./src/debug";
 export { postWebUrl, replyWebUrl } from "./src/url";
 export { loadLedger, recordPost, type LedgerEntry } from "./src/ledger";
 export { findForbiddenLinks } from "./src/links";
+export { OnboardingClient, OnboardingError, type FlowMeta, type OnboardingFlow, type OnboardingStatus, type RegistrationValues, type Registration } from "./src/onboarding";

@@ -2,8 +2,10 @@ import { beforeEach, afterEach, describe, expect, it } from "bun:test";
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runCli, parseArgs } from "../src/cli";
-import { startFakeSofa, type FakeSofa } from "./fake-sofa";
+import { SofaClient } from "../src/client";
+import { startFakeSofa, testConfig, type FakeSofa } from "./fake-sofa";
 import { setupTmpHome } from "./helpers";
+import { OnboardingClient } from "../src/onboarding";
 
 const getTmpHome = setupTmpHome();
 
@@ -191,7 +193,7 @@ describe("sofa CLI", () => {
     rmSync(join(getTmpHome(), ".sofa", "credentials.json"));
     const res = await runCli(["whoami"]);
     expect(res.exitCode).toBe(1);
-    expect(res.stderr).toContain("onboarding");
+    expect(res.stderr).toContain("sofa init");
   });
 
   it("empty --title= exits 1 mentioning --title", async () => {
@@ -340,5 +342,170 @@ describe("sofa CLI", () => {
     const arr = JSON.parse(res.stdout) as Array<{ id: string }>;
     expect(Array.isArray(arr)).toBe(true);
     expect(arr.some((p) => p.id === "p-j1")).toBe(true);
+  });
+});
+
+describe("sofa init", () => {
+  const home = setupTmpHome();
+
+  function initDeps(fake: ReturnType<typeof startFakeSofa>, opened: string[]) {
+    return {
+      makeOnboardingClient: (baseUrl: string) => new OnboardingClient({ baseUrl, delayMs: 0 }),
+      openUrl: async (url: string) => { opened.push(url); return true; },
+      makeClient: async (_agentId?: string) => new SofaClient(testConfig(fake.baseUrl), undefined),
+    };
+  }
+
+  function routeOnboarding(fake: ReturnType<typeof startFakeSofa>) {
+    fake.route("POST", "/api/onboarding/flows", () => Response.json({
+      flow_id: "f-1", claim_url: "https://agents.stackoverflow.com/onboarding/claim/f-1",
+      claim_code: "ABCD-1234", poll_token: "ptok", poll_after_seconds: 0,
+      expires_at: "2099-01-01T00:00:00Z",
+    }, { status: 201 }));
+    let n = 0;
+    fake.route("POST", "/api/onboarding/flows/f-1/status", () => {
+      const ready = n++ >= 1;
+      return Response.json({ state: ready ? "auth_code_retrieved" : "pending_claim", auth_code: ready ? "AUTHX" : null, auth_code_expires_at: null, expires_at: "2099-01-01T00:00:00Z", poll_after_seconds: 0, recovery: null });
+    });
+    fake.route("POST", "/api/onboarding/registrations", () => Response.json({
+      agent_id: "5c003656", api_key: "sk-secretlive", api_key_prefix: "sk", api_key_suffix: "ve",
+    }, { status: 201 }));
+    fake.routeSession();
+    fake.route("GET", "/api/me/agents", () => Response.json({ items: [{ id: "5c003656", name: "drakulavich-agent", description: "d", persona: "", avatar_type: "robot", agent_is_top_contributor: false, created_at: "2026-06-13T00:00:00Z", stats: { question_count: 0, answer_count: 0, blueprint_count: 0, til_count: 0, vote_count: 0, verification_count: 0, reputation: 7 } }] }));
+  }
+
+  it("happy path: flow → poll → register → store key → verify whoami", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      routeOnboarding(fake);
+      const opened: string[] = [];
+      const res = await runCli(["init", "--name=drakulavich-agent", "--description=Claude agent"], initDeps(fake, opened));
+      expect(res.exitCode).toBe(0);
+      expect(opened).toEqual(["https://agents.stackoverflow.com/onboarding/claim/f-1"]);
+      expect(res.stdout).toContain("ABCD-1234");
+      expect(res.stdout).toContain("Signed in as drakulavich-agent");
+      expect(res.stdout).not.toContain("sk-secretlive");
+      const store = JSON.parse(readFileSync(join(home(), ".sofa", "credentials.json"), "utf8"));
+      expect(store["5c003656"].api_key).toBe("sk-secretlive");
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("--no-open prints the URL and never calls the opener", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      routeOnboarding(fake);
+      const opened: string[] = [];
+      const res = await runCli(["init", "--name=x", "--description=d", "--no-open"], initDeps(fake, opened));
+      expect(res.exitCode).toBe(0);
+      expect(opened).toEqual([]);
+      expect(res.stdout).toContain("/onboarding/claim/f-1");
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("missing --name exits 1", async () => {
+    const res = await runCli(["init", "--description=d"]);
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("--name");
+  });
+
+  it("already-configured without --add exits 1 with guidance", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      const { saveCredential } = await import("../src/credentials");
+      await saveCredential("existing", { agent_name: "old", base_url: fake.baseUrl, api_key: "sk-old" });
+      const res = await runCli(["init", "--name=x", "--description=d"], initDeps(fake, []));
+      expect(res.exitCode).toBe(1);
+      expect(res.stderr).toContain("--add");
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("flow denied exits 2 with recovery", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      fake.route("POST", "/api/onboarding/flows", () => Response.json({ flow_id: "f-1", claim_url: "https://agents.stackoverflow.com/onboarding/claim/f-1", claim_code: "C", poll_token: "p", poll_after_seconds: 0, expires_at: "2099-01-01T00:00:00Z" }, { status: 201 }));
+      fake.route("POST", "/api/onboarding/flows/f-1/status", () => Response.json({ state: "denied", auth_code: null, auth_code_expires_at: null, expires_at: "2099-01-01T00:00:00Z", poll_after_seconds: 0, recovery: "ask the human to retry" }));
+      const res = await runCli(["init", "--name=x", "--description=d"], initDeps(fake, []));
+      expect(res.exitCode).toBe(2);
+      expect(res.stderr).toContain("ask the human to retry");
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("--json emits structured data without the raw api_key", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      routeOnboarding(fake);
+      const res = await runCli(["init", "--name=x", "--description=d", "--json"], initDeps(fake, []));
+      expect(res.exitCode).toBe(0);
+      const parsed = JSON.parse(res.stdout) as Record<string, unknown>;
+      expect(parsed.agent_id).toBeDefined();
+      expect(parsed.api_key_prefix).toBeDefined();
+      expect(parsed.api_key_suffix).toBeDefined();
+      expect(parsed.api_key).toBeUndefined();
+      expect(res.stdout).not.toContain("sk-secretlive");
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("--add on empty store: registers first agent, no multi-agent note", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      routeOnboarding(fake);
+      const res = await runCli(["init", "--name=x", "--description=d", "--add"], initDeps(fake, []));
+      expect(res.exitCode).toBe(0);
+      expect(res.stdout).not.toContain("Multiple agents");
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("--add happy path: registers a second agent alongside an existing one", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      const { saveCredential } = await import("../src/credentials");
+      await saveCredential("old-agent", { agent_name: "old", base_url: fake.baseUrl, api_key: "sk-old" });
+      routeOnboarding(fake);
+      const res = await runCli(["init", "--name=new", "--description=d", "--add"], initDeps(fake, []));
+      expect(res.exitCode).toBe(0);
+      expect(res.stdout).toContain("Multiple agents now stored");
+      const store = JSON.parse(readFileSync(join(home(), ".sofa", "credentials.json"), "utf8"));
+      expect(store["old-agent"]).toBeDefined();
+      expect(store["5c003656"]).toBeDefined();
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("model flags are forwarded to the createFlow request body", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      routeOnboarding(fake);
+      const res = await runCli(
+        ["init", "--name=x", "--description=d", "--model-name=gpt-5", "--model-provider=openai", "--model-selection-mode=fixed"],
+        initDeps(fake, []),
+      );
+      expect(res.exitCode).toBe(0);
+      const flowReq = fake.requests.find((r) => r.path === "/api/onboarding/flows")?.body as Record<string, unknown> | undefined;
+      expect(flowReq?.model_name).toBe("gpt-5");
+      expect(flowReq?.model_provider).toBe("openai");
+      expect(flowReq?.model_selection_mode).toBe("fixed");
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
+  });
+
+  it("corrupt credentials.json exits 1 before starting the flow", async () => {
+    const fake = startFakeSofa();
+    try {
+      process.env.SOFA_BASE_URL = fake.baseUrl;
+      const credDir = join(home(), ".sofa");
+      mkdirSync(credDir, { recursive: true });
+      writeFileSync(join(credDir, "credentials.json"), "not valid json{{{");
+      const res = await runCli(["init", "--name=x", "--description=d"], initDeps(fake, []));
+      expect(res.exitCode).toBe(1);
+      expect(res.stderr).toContain("not valid JSON");
+      // No flow should have been started
+      expect(fake.requests.find((r) => r.path === "/api/onboarding/flows")).toBeUndefined();
+    } finally { fake.stop(); delete process.env.SOFA_BASE_URL; }
   });
 });

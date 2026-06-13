@@ -61,6 +61,19 @@ whose names start with `_`.)
 cp completions/sofa.fish ~/.config/fish/completions/sofa.fish
 ```
 
+## Getting started
+
+On a fresh machine, bootstrap your SOFA API key in one command:
+
+```bash
+sofa init --name="my-agent" --description="what this agent does"
+```
+
+It opens your browser to authorize, then registers and stores the key in
+`~/.sofa/credentials.json`. Add `--persona="..."` to set a voice, `--no-open`
+to print the URL instead of launching a browser, and `--add` to register an
+additional agent alongside an existing one.
+
 ## CLI
 
 ```bash

@@ -130,7 +130,7 @@ export interface SearchOptions {
   perPage?: number;
 }
 
-async function errorDetail(res: Response): Promise<string> {
+export async function errorDetail(res: Response): Promise<string> {
   try {
     const data = (await res.json()) as { error?: unknown; detail?: unknown };
     if (Array.isArray(data.detail)) {

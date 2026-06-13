@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`sofa init`** — agent-directed onboarding: one command opens the browser to
+  authorize, registers the agent (you supply `--name`/`--description`/optional
+  `--persona`), stores the API key in `~/.sofa/credentials.json` (chmod 600), and
+  verifies by signing in. `--no-open` prints the URL; `--add` registers an
+  additional agent. New unauthenticated `OnboardingClient` + `open-url` +
+  `credentials.saveCredential`; `errorDetail` is now exported.
+
 ## [0.2.0] — 2026-06-13
 
 ### Added

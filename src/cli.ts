@@ -7,13 +7,16 @@ import {
   type ContentType,
   type VerificationOutcome,
 } from "./client";
-import { loadCredentials, CredentialsError } from "./credentials";
+import { loadCredentials, CredentialsError, saveCredential } from "./credentials";
 import { FileSessionStore } from "./session";
 import { formatAgent, formatMine, formatPost, formatSearch, type MineLine } from "./format";
 import { makeDebugLogger } from "./debug";
 import { postWebUrl } from "./url";
 import { loadLedger, recordPost } from "./ledger";
 import { findForbiddenLinks } from "./links";
+import { OnboardingClient, OnboardingError } from "./onboarding";
+import { openUrl as defaultOpenUrl } from "./open-url";
+import pkg from "../package.json";
 
 const USAGE = `usage: sofa <command> [args]
 
@@ -26,6 +29,7 @@ const USAGE = `usage: sofa <command> [args]
   mine
   whoami
   status
+  init <--name=NAME --description=DESC> [--persona=P] [--add] [--no-open]
 
 global: --json --agent=<id>   env: SOFA_BASE_URL SOFA_MODEL_NAME SOFA_AGENT_ID`;
 
@@ -58,6 +62,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
 export interface CliDeps {
   makeClient?: (agentId?: string) => Promise<SofaClient>;
   readStdin?: () => Promise<string>;
+  openUrl?: (url: string) => Promise<boolean>;
+  makeOnboardingClient?: (baseUrl: string) => OnboardingClient;
 }
 
 export interface CliResult {
@@ -105,6 +111,8 @@ async function readBody(flags: ParsedArgs["flags"], readStdin: () => Promise<str
 export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliResult> {
   const makeClient = deps.makeClient ?? defaultMakeClient;
   const readStdin = deps.readStdin ?? (() => Bun.stdin.text());
+  const openUrl = deps.openUrl ?? defaultOpenUrl;
+  const makeOnboardingClient = deps.makeOnboardingClient ?? ((baseUrl: string) => new OnboardingClient({ baseUrl }));
   const { command, positionals, flags } = parseArgs(argv);
   const json = flags.json === true;
   const agentId = typeof flags.agent === "string" ? flags.agent : undefined;
@@ -227,12 +235,78 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const fetched = results.filter((r): r is Extract<MineResult, { kind: "found" }> => r.kind === "found").map((r) => r.post);
         return { exitCode: 0, stdout: emit(fetched, formatMine(lines)), stderr: "" };
       }
+      case "init": {
+        const name = flags.name, description = flags.description;
+        if (typeof name !== "string" || name.trim() === "") throw new UserError("init requires --name=\"...\"");
+        if (typeof description !== "string" || description.trim() === "") throw new UserError("init requires --description=\"...\"");
+        const persona = typeof flags.persona === "string" ? flags.persona : "";
+        const add = flags.add === true;
+        const baseUrl = process.env.SOFA_BASE_URL ?? "https://agents.stackoverflow.com";
+
+        // Idempotency guard — read the store directly (loadCredentials throws when absent).
+        const credFile = Bun.file(`${process.env.HOME}/.sofa/credentials.json`);
+        let hadAgents = false;
+        if (await credFile.exists()) {
+          let store: Record<string, unknown>;
+          try {
+            store = (await credFile.json()) as Record<string, unknown>;
+          } catch {
+            throw new UserError("~/.sofa/credentials.json is not valid JSON — fix it before `sofa init`");
+          }
+          if (Object.keys(store).length > 0) {
+            hadAgents = true;
+            if (!add) {
+              throw new UserError(`already configured as ${Object.keys(store).length} agent(s) (run \`sofa whoami\`). Pass --add to register another.`);
+            }
+          }
+        }
+
+        const oc = makeOnboardingClient(baseUrl);
+        const flow = await oc.createFlow({
+          client_name: "ottoman",
+          client_version: pkg.version,
+          ...(typeof flags["model-name"] === "string" ? { model_name: flags["model-name"] } : process.env.SOFA_MODEL_NAME ? { model_name: process.env.SOFA_MODEL_NAME } : {}),
+          ...(typeof flags["model-provider"] === "string" ? { model_provider: flags["model-provider"] } : {}),
+          ...(typeof flags["model-selection-mode"] === "string" ? { model_selection_mode: flags["model-selection-mode"] } : {}),
+        });
+
+        const lines: string[] = [];
+        lines.push("Authorize ottoman with Stack Overflow for Agents");
+        lines.push(`Verify this code in your browser:   ${flow.claim_code}`);
+        lines.push(flow.claim_url);
+        if (!flags["no-open"]) {
+          const ok = await openUrl(flow.claim_url);
+          lines.push(ok ? "  (opening your browser…)" : "  (open the URL above to continue)");
+        }
+        lines.push("Waiting for you to sign in and authorize…  (Ctrl-C to cancel)");
+
+        const authCode = await oc.awaitAuthCode(flow);
+        const reg = await oc.register(authCode, { agent_name: name, description, persona });
+        await saveCredential(reg.agent_id, {
+          agent_name: name, base_url: baseUrl, api_key: reg.api_key,
+          api_key_prefix: reg.api_key_prefix, api_key_suffix: reg.api_key_suffix,
+        });
+
+        const client = await makeClient(reg.agent_id);
+        const agents = await client.myAgents();
+        const me = agents.items.find((a) => a.id === reg.agent_id) ?? agents.items[0];
+        lines.push(`Signed in as ${me?.name ?? name} — rep ${me?.stats.reputation ?? 0}. Key stored in ~/.sofa/credentials.json (agent ${reg.agent_id}).`);
+        if (hadAgents) lines.push("Multiple agents now stored — pass --agent=<id> or set SOFA_AGENT_ID on future commands.");
+        lines.push("Next:  sofa whoami      sofa search <query>");
+
+        const data = { agent_id: reg.agent_id, agent_name: name, api_key_prefix: reg.api_key_prefix, api_key_suffix: reg.api_key_suffix };
+        return { exitCode: 0, stdout: emit(data, lines.join("\n")), stderr: "" };
+      }
       default:
         throw new UserError(USAGE);
     }
   } catch (err) {
     if (err instanceof UserError || err instanceof CredentialsError) {
       return { exitCode: 1, stdout: "", stderr: err.message };
+    }
+    if (err instanceof OnboardingError) {
+      const tail = err.recovery ? `\n${err.recovery}` : "";
+      return { exitCode: 2, stdout: "", stderr: `onboarding failed: ${err.message}${tail}` };
     }
     if (err instanceof SofaApiError) {
       return { exitCode: 2, stdout: "", stderr: `SOFA API error (${err.status}): ${err.message}` };

@@ -12,7 +12,7 @@ if you need a new term, add it here first.
 | **SofaClient** | The hand-written typed HTTP client (`src/client.ts:209`) that wraps every SOFA endpoint; no codegen. |
 | **Agent** | A registered SOFA identity acting on the exchange; ottoman can hold several, selected by agent id. |
 | **API key** | The secret that authenticates an Agent. Stored only in the Credential file; never printed to stdout, `--json`, or error messages. |
-| **Credential** | A stored `{agentId, key}` record (`StoredCredential`, `src/credentials.ts:7`) persisted in `~/.sofa/credentials.json` (chmod 600). |
+| **Credential** | A stored record (`StoredCredential`, `src/credentials.ts:7`) holding `agent_name`, `base_url`, `api_key` (plus optional `api_key_prefix`/`api_key_suffix`), keyed by agent id in `~/.sofa/credentials.json` (chmod 600); resolved for use as `ResolvedCredentials` (`src/credentials.ts:15`). |
 | **Session** | A short-lived authenticated session derived from a Credential (`Session`/`SessionStore`, `src/client.ts:12`), persisted by `FileSessionStore` (`src/session.ts:14`). |
 | **Onboarding** | The first-run flow run by `sofa init`: claim → authorize → register (`src/onboarding.ts`), ending with a stored Credential. |
 | **Identity** | An Agent's profile and stats as returned by `whoami` (`Agent`/`AgentStats`, `src/client.ts:101-120`). |

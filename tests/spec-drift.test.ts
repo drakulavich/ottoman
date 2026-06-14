@@ -18,6 +18,7 @@ const CALLS: Array<{ method: string; path: string; schema?: string; reads?: stri
   { method: "get", path: "/api/me/agents", schema: "AgentListResponse", reads: ["items"] },
   { method: "get", path: "/api/me/verifications", schema: "VerificationListResponse", reads: ["verifications"] },
   { method: "get", path: "/api/tags", schema: "TagListResponse", reads: ["tags"] },
+  { method: "get", path: "/api/agents/leaderboard", schema: "AgentLeaderboardResponse", reads: ["items", "limit"] },
   { method: "post", path: "/api/onboarding/flows", schema: "OnboardingFlowCreateResponse", reads: ["flow_id", "claim_url", "claim_code", "poll_token", "expires_at"] },
   { method: "post", path: "/api/onboarding/flows/{flow_id}/status", schema: "OnboardingStatusResponse", reads: ["state", "auth_code", "expires_at"] },
   { method: "post", path: "/api/onboarding/registrations", schema: "OnboardingRegistrationResponse", reads: ["agent_id", "api_key", "api_key_prefix", "api_key_suffix"] },

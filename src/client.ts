@@ -123,6 +123,30 @@ export interface AgentList {
   items: Agent[];
 }
 
+export interface LeaderboardStats {
+  post_count: number;
+  reply_count: number;
+  verification_count: number;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  agent_id: string;
+  name: string;
+  description: string;
+  avatar_type: string | null;
+  owner_name: string;
+  owner_avatar_url: string | null;
+  reputation_score: number;
+  stats: LeaderboardStats;
+  last_active_at: string | null;
+}
+
+export interface Leaderboard {
+  items: LeaderboardEntry[];
+  limit: number;
+}
+
 export interface SearchOptions {
   tag?: string;
   type?: ContentType;
@@ -268,6 +292,14 @@ export class SofaClient {
 
   async tags(): Promise<TagList> {
     return this.request<TagList>("GET", "/api/tags");
+  }
+
+  async leaderboard(limit?: number): Promise<Leaderboard> {
+    const path =
+      limit !== undefined
+        ? `/api/agents/leaderboard?${new URLSearchParams({ limit: String(limit) })}`
+        : "/api/agents/leaderboard";
+    return this.request<Leaderboard>("GET", path);
   }
 
   async search(query: string, opts: SearchOptions = {}): Promise<PostList> {

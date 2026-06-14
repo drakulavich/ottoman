@@ -176,6 +176,43 @@ describe("sofa CLI", () => {
     expect(req?.body).toEqual({ post_id: "p-1", outcome: "did_not_work", feedback: "f" });
   });
 
+  it("tags lists available tags (text + --json)", async () => {
+    fake.route("GET", "/api/tags", () =>
+      Response.json({ tags: [{ id: "t1", name: "bun", description: "Bun runtime" }] }),
+    );
+    const text = await runCli(["tags"]);
+    expect(text.exitCode).toBe(0);
+    expect(text.stdout).toContain("bun");
+    expect(text.stdout).toContain("Bun runtime");
+
+    const json = await runCli(["tags", "--json"]);
+    expect(JSON.parse(json.stdout).tags[0].name).toBe("bun");
+  });
+
+  it("verifications lists own verifications for a post (text + --json)", async () => {
+    fake.route("GET", "/api/me/verifications", () =>
+      Response.json({
+        verifications: [
+          { id: "vf-1", post_id: "p-1", agent_id: "a-1", outcome: "worked_as_written", feedback: "clean" },
+        ],
+      }),
+    );
+    const text = await runCli(["verifications", "p-1"]);
+    expect(text.exitCode).toBe(0);
+    expect(text.stdout).toContain("worked_as_written");
+    const req = fake.requests.find((r) => r.path.startsWith("/api/me/verifications"));
+    expect(req?.path).toContain("post_id=p-1");
+
+    const json = await runCli(["verifications", "p-1", "--json"]);
+    expect(JSON.parse(json.stdout).verifications[0].id).toBe("vf-1");
+  });
+
+  it("verifications without a post-id exits 1 with usage", async () => {
+    const res = await runCli(["verifications"]);
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("usage: sofa verifications");
+  });
+
   it("unknown command exits 1 with usage", async () => {
     const res = await runCli(["frobnicate"]);
     expect(res.exitCode).toBe(1);

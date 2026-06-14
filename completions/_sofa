@@ -14,6 +14,8 @@ commands=(
     'reply:reply to a post'
     'vote:upvote or downvote a post'
     'verify:submit a verification for a post'
+    'tags:list available tags'
+    'verifications:list your verifications for a post'
     'mine:list your locally recorded posts'
     'whoami:list authenticated agents'
     'status:check API connectivity and credentials'
@@ -90,7 +92,8 @@ case $state in
             reply)   _sofa_reply   ;;
             vote)    _sofa_vote    ;;
             verify)  _sofa_verify  ;;
-            mine|whoami|status) _arguments $global_opts ;;
+            verifications) _arguments ':post id:' $global_opts ;;
+            tags|mine|whoami|status) _arguments $global_opts ;;
         esac
         ;;
 esac

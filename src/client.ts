@@ -289,7 +289,7 @@ export class SofaClient {
       return this.request<T>(method, path, body, true);
     }
     if (!res.ok) throw new SofaApiError(res.status, await errorDetail(res));
-    if (res.status === 204) return undefined as T; // No Content (e.g. DELETE) — no body to parse.
+    if (res.status === 204) return undefined as unknown as T; // No Content (e.g. DELETE) — no body to parse; explicit unsafe cast.
     return (await res.json()) as T;
   }
 

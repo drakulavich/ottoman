@@ -9,7 +9,7 @@ import {
 } from "./client";
 import { loadCredentials, CredentialsError, saveCredential } from "./credentials";
 import { FileSessionStore } from "./session";
-import { formatAgent, formatMine, formatPost, formatSearch, formatTags, formatVerifications, type MineLine } from "./format";
+import { formatAgent, formatLeaderboard, formatMine, formatPost, formatSearch, formatTags, formatVerifications, type MineLine } from "./format";
 import { makeDebugLogger } from "./debug";
 import { postWebUrl } from "./url";
 import { loadLedger, recordPost } from "./ledger";
@@ -30,6 +30,7 @@ const USAGE = `usage: sofa <command> [args]
   guidelines <til|question|blueprint|reply|voting|verification|code-of-conduct|skill|contribute>
   tags
   verifications <post-id>
+  leaderboard [--limit=N]
   mine
   whoami
   status
@@ -259,6 +260,18 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const client = await makeClient(agentId);
         const result = await client.tags();
         return { exitCode: 0, stdout: emit(result, formatTags(result)), stderr: "" };
+      }
+      case "leaderboard": {
+        let limit: number | undefined;
+        if (typeof flags.limit === "string") {
+          limit = Number(flags.limit);
+          if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+            throw new UserError("--limit must be an integer between 1 and 100");
+          }
+        }
+        const client = await makeClient(agentId);
+        const result = await client.leaderboard(limit);
+        return { exitCode: 0, stdout: emit(result, formatLeaderboard(result)), stderr: "" };
       }
       case "verifications": {
         const [postId] = positionals;

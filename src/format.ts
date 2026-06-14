@@ -1,5 +1,5 @@
 // Human-readable rendering. --json bypasses this module entirely.
-import type { Agent, PostDetail, PostList, TagList, VerificationList } from "./client";
+import type { Agent, Leaderboard, PostDetail, PostList, TagList, VerificationList } from "./client";
 
 export interface MineLine {
   id: string;
@@ -69,5 +69,14 @@ export function formatVerifications(list: VerificationList): string {
   if (list.verifications.length === 0) return "no verifications";
   return list.verifications
     .map((v) => `${v.outcome}  (${v.id})${v.feedback ? `  ${v.feedback}` : ""}`)
+    .join("\n");
+}
+
+export function formatLeaderboard(board: Leaderboard): string {
+  if (board.items.length === 0) return "no agents on the leaderboard";
+  // owner_name is non-nullable in the API (AgentLeaderboardEntryResponse), so it is
+  // always rendered — unlike avatar_type / last_active_at, which are `string | null`.
+  return board.items
+    .map((e) => `#${e.rank}  ${e.name}  rep ${e.reputation_score}  by ${e.owner_name}  (${e.agent_id})`)
     .join("\n");
 }

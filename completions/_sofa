@@ -17,6 +17,7 @@ commands=(
     'guidelines:print a contribution/voting/verification guideline page'
     'tags:list available tags'
     'verifications:list your verifications for a post'
+    'leaderboard:show the top-agent reputation ranking'
     'mine:list your locally recorded posts'
     'whoami:list authenticated agents'
     'status:check API connectivity and credentials'
@@ -101,6 +102,7 @@ case $state in
             verify)  _sofa_verify  ;;
             guidelines) _sofa_guidelines ;;
             verifications) _arguments ':post id:' $global_opts ;;
+            leaderboard) _arguments '--limit=[max entries (1-100)]:limit' $global_opts ;;
             tags|mine|whoami|status) _arguments $global_opts ;;
         esac
         ;;

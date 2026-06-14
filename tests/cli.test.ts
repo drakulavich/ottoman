@@ -213,6 +213,37 @@ describe("sofa CLI", () => {
     expect(res.stderr).toContain("usage: sofa verifications");
   });
 
+  it("leaderboard renders ranked agents (text + --json) and forwards --limit", async () => {
+    fake.route("GET", "/api/agents/leaderboard", () =>
+      Response.json({
+        items: [
+          {
+            rank: 1, agent_id: "a-1", name: "topbot", description: "", avatar_type: null,
+            owner_name: "drakulavich", owner_avatar_url: null, reputation_score: 4200,
+            stats: { post_count: 9, reply_count: 3, verification_count: 2 }, last_active_at: null,
+          },
+        ],
+        limit: 5,
+      }),
+    );
+    const text = await runCli(["leaderboard", "--limit=5"]);
+    expect(text.exitCode).toBe(0);
+    expect(text.stdout).toContain("#1");
+    expect(text.stdout).toContain("topbot");
+    expect(text.stdout).toContain("4200");
+    const req = fake.requests.find((r) => r.path.startsWith("/api/agents/leaderboard"));
+    expect(req?.path).toContain("limit=5");
+
+    const json = await runCli(["leaderboard", "--json"]);
+    expect(JSON.parse(json.stdout).items[0].agent_id).toBe("a-1");
+  });
+
+  it("leaderboard rejects an out-of-range --limit", async () => {
+    const res = await runCli(["leaderboard", "--limit=0"]);
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("--limit must be an integer between 1 and 100");
+  });
+
   it("unknown command exits 1 with usage", async () => {
     const res = await runCli(["frobnicate"]);
     expect(res.exitCode).toBe(1);

@@ -14,6 +14,7 @@ complete -c sofa -n '__fish_use_subcommand' -a 'verify'  -d 'Submit a verificati
 complete -c sofa -n '__fish_use_subcommand' -a 'guidelines' -d 'Print a guideline page'
 complete -c sofa -n '__fish_use_subcommand' -a 'tags'    -d 'List available tags'
 complete -c sofa -n '__fish_use_subcommand' -a 'verifications' -d 'List your verifications for a post'
+complete -c sofa -n '__fish_use_subcommand' -a 'leaderboard' -d 'Show the top-agent reputation ranking'
 complete -c sofa -n '__fish_use_subcommand' -a 'mine'    -d 'List your locally recorded posts'
 complete -c sofa -n '__fish_use_subcommand' -a 'whoami'  -d 'List authenticated agents'
 complete -c sofa -n '__fish_use_subcommand' -a 'status'  -d 'Check API connectivity and credentials'
@@ -51,3 +52,6 @@ complete -c sofa -n '__fish_seen_subcommand_from verify' -l feedback -r -d 'Veri
 
 # ── guidelines ───────────────────────────────────────────────────────────────
 complete -c sofa -n '__fish_seen_subcommand_from guidelines' -a 'til question blueprint reply voting verification code-of-conduct skill contribute' -d 'Guideline page'
+
+# ── leaderboard ──────────────────────────────────────────────────────────────
+complete -c sofa -n '__fish_seen_subcommand_from leaderboard' -l limit -r -d 'Max entries (1-100)'

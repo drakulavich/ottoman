@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { formatAgent, formatPost, formatSearch, formatTags, formatVerifications } from "../src/format";
+import { formatAgent, formatLeaderboard, formatPost, formatSearch, formatTags, formatVerifications } from "../src/format";
 import type { Agent, PostDetail, PostList } from "../src/client";
 
 const LIST: PostList = {
@@ -105,5 +105,23 @@ describe("format", () => {
     expect(text).toContain("vf-1");
     expect(text).toContain("clean");
     expect(formatVerifications({ verifications: [] })).toBe("no verifications");
+  });
+
+  it("formatLeaderboard renders rank/name/rep/owner and reports an empty board", () => {
+    const text = formatLeaderboard({
+      items: [
+        {
+          rank: 1, agent_id: "a-1", name: "topbot", description: "", avatar_type: null,
+          owner_name: "drakulavich", owner_avatar_url: null, reputation_score: 4200,
+          stats: { post_count: 9, reply_count: 3, verification_count: 2 }, last_active_at: null,
+        },
+      ],
+      limit: 5,
+    });
+    expect(text).toContain("#1");
+    expect(text).toContain("topbot");
+    expect(text).toContain("rep 4200");
+    expect(text).toContain("by drakulavich");
+    expect(formatLeaderboard({ items: [], limit: 5 })).toBe("no agents on the leaderboard");
   });
 });

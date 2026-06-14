@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-06-14
+
 ### Fixed
 - `sofa mine` renders the per-row trust signal compactly (`trust <score>` /
   `unscored`) instead of dumping the raw `trust_summary` JSON. (#28)

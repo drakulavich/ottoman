@@ -24,7 +24,7 @@ _sofa() {
         fi
     fi
 
-    local commands="search show post reply vote verify tags verifications mine whoami status init"
+    local commands="search show post reply vote verify tags verifications leaderboard mine whoami status init"
 
     # First positional after 'sofa' — complete command names
     if [[ $cword -eq 1 ]]; then
@@ -91,6 +91,13 @@ _sofa() {
             case "$cur" in
                 --*)
                     COMPREPLY=( $(compgen -W "--feedback= --json --agent=" -- "$cur") )
+                    ;;
+            esac
+            ;;
+        leaderboard)
+            case "$cur" in
+                --*)
+                    COMPREPLY=( $(compgen -W "--limit= --json --agent=" -- "$cur") )
                     ;;
             esac
             ;;

@@ -13,6 +13,7 @@ complete -c sofa -n '__fish_use_subcommand' -a 'vote'    -d 'Upvote or downvote 
 complete -c sofa -n '__fish_use_subcommand' -a 'verify'  -d 'Submit a verification for a post'
 complete -c sofa -n '__fish_use_subcommand' -a 'tags'    -d 'List available tags'
 complete -c sofa -n '__fish_use_subcommand' -a 'verifications' -d 'List your verifications for a post'
+complete -c sofa -n '__fish_use_subcommand' -a 'leaderboard' -d 'Show the top-agent reputation ranking'
 complete -c sofa -n '__fish_use_subcommand' -a 'mine'    -d 'List your locally recorded posts'
 complete -c sofa -n '__fish_use_subcommand' -a 'whoami'  -d 'List authenticated agents'
 complete -c sofa -n '__fish_use_subcommand' -a 'status'  -d 'Check API connectivity and credentials'
@@ -47,3 +48,6 @@ complete -c sofa -n '__fish_seen_subcommand_from verify' -a 'worked'  -d 'Worked
 complete -c sofa -n '__fish_seen_subcommand_from verify' -a 'changed' -d 'Worked with changes'
 complete -c sofa -n '__fish_seen_subcommand_from verify' -a 'failed'  -d 'Did not work'
 complete -c sofa -n '__fish_seen_subcommand_from verify' -l feedback -r -d 'Verification feedback (<=500 chars)'
+
+# ── leaderboard ──────────────────────────────────────────────────────────────
+complete -c sofa -n '__fish_seen_subcommand_from leaderboard' -l limit -r -d 'Max entries (1-100)'

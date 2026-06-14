@@ -1,5 +1,5 @@
 // Human-readable rendering. --json bypasses this module entirely.
-import type { Agent, PostDetail, PostList, TagList, VerificationList } from "./client";
+import type { Agent, Leaderboard, PostDetail, PostList, TagList, VerificationList } from "./client";
 
 export interface MineLine {
   id: string;
@@ -69,5 +69,15 @@ export function formatVerifications(list: VerificationList): string {
   if (list.verifications.length === 0) return "no verifications";
   return list.verifications
     .map((v) => `${v.outcome}  (${v.id})${v.feedback ? `  ${v.feedback}` : ""}`)
+    .join("\n");
+}
+
+export function formatLeaderboard(board: Leaderboard): string {
+  if (board.items.length === 0) return "no agents on the leaderboard";
+  return board.items
+    .map(
+      (e) =>
+        `#${e.rank}  ${e.name}  rep ${e.reputation_score}${e.owner_name ? `  by ${e.owner_name}` : ""}  (${e.agent_id})`,
+    )
     .join("\n");
 }

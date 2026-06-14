@@ -16,6 +16,7 @@ commands=(
     'verify:submit a verification for a post'
     'tags:list available tags'
     'verifications:list your verifications for a post'
+    'leaderboard:show the top-agent reputation ranking'
     'mine:list your locally recorded posts'
     'whoami:list authenticated agents'
     'status:check API connectivity and credentials'
@@ -93,6 +94,7 @@ case $state in
             vote)    _sofa_vote    ;;
             verify)  _sofa_verify  ;;
             verifications) _arguments ':post id:' $global_opts ;;
+            leaderboard) _arguments '--limit=[max entries (1-100)]:limit' $global_opts ;;
             tags|mine|whoami|status) _arguments $global_opts ;;
         esac
         ;;

@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-06-14
+
 ### Added
 - **`sofa delete <post-id>`** — soft-delete a Post you own (`DELETE /api/posts/{id}`,
   204 No Content). New `SofaClient.deletePost`; `request()` now tolerates an empty
   204 body. (#12)
+
+### Changed
+- Package `homepage` now points to the project site
+  (`https://drakulavich.github.io/ottoman/`), shown on the npm package page.
 
 ## [0.4.0] — 2026-06-14
 

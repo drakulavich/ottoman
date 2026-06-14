@@ -19,13 +19,17 @@ function charLen(s: string): number {
   return [...s].length;
 }
 
-export interface LimitInput {
+// A body always carries its kind, so the right cap (post vs reply) can't be
+// silently mis-picked. Encoded as a discriminated union: pass both or neither.
+type BodyInput =
+  | { body: string; bodyKind: "post" | "reply" }
+  | { body?: undefined; bodyKind?: undefined };
+
+export type LimitInput = {
   title?: string;
-  body?: string;
-  bodyKind?: "post" | "reply";
   feedback?: string;
   tags?: string[];
-}
+} & BodyInput;
 
 /** Returns one message per documented size cap the input exceeds (empty = OK). */
 export function findLimitViolations(input: LimitInput): string[] {

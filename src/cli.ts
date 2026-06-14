@@ -239,7 +239,7 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         if (!postId || !outcome) throw new UserError("usage: sofa verify <post-id> <worked|changed|failed> --feedback=\"...\"");
         if (typeof flags.feedback !== "string" || flags.feedback.trim() === "") throw new UserError("verify requires --feedback=\"...\" (<=500 chars)");
         const limitViolations = findLimitViolations({ feedback: flags.feedback });
-        if (limitViolations.length > 0) throw new UserError(limitViolations.join("; "));
+        if (limitViolations.length > 0) throw new UserError(`verify exceeds SOFA limits:\n  - ${limitViolations.join("\n  - ")}`);
         const client = await makeClient(agentId);
         const v = await client.verify(postId, outcome, flags.feedback);
         return { exitCode: 0, stdout: emit(v, `verified ${v.post_id}: ${v.outcome}`), stderr: "" };

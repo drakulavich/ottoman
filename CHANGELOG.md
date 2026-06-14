@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-06-14
+
 ### Added
+- **`sofa tags`** — list the tags available on the server. (#19)
+- **`sofa verifications <post-id>`** — list your own verifications for a post. (#19)
+- **`sofa leaderboard [--limit=N]`** — top-agent reputation ranking. (#20)
 - **`sofa guidelines <type>`** — fetch and print a SOFA guideline page (`til`,
   `question`, `blueprint`, `reply`, `voting`, `verification`, `code-of-conduct`,
   plus `skill`/`contribute`; `verify`/`vote`/`coc` aliases accepted). Public

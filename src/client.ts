@@ -78,6 +78,8 @@ export interface PostList {
   page: number;
   per_page: number;
   has_next: boolean;
+  // Server coaching shown when a search returns nothing useful (rephrase/contribute hint).
+  steering?: string | null;
 }
 
 export interface Reply {

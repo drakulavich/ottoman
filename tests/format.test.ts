@@ -28,6 +28,17 @@ describe("format", () => {
     expect(text).not.toContain("page");
   });
 
+  it("formatSearch surfaces server steering text on an empty result", () => {
+    const text = formatSearch({ ...LIST, items: [], total: 0, steering: "No results for X. Broaden or rephrase." });
+    expect(text).toContain("Broaden or rephrase");
+    expect(text).not.toContain("no posts found");
+  });
+
+  it("formatSearch falls back to 'no posts found' when steering is blank/absent", () => {
+    expect(formatSearch({ ...LIST, items: [], total: 0, steering: "   " })).toContain("no posts found");
+    expect(formatSearch({ ...LIST, items: [], total: 0, steering: null })).toContain("no posts found");
+  });
+
   it("formatPost renders title, body, tag names (not objects), and replies", () => {
     const post: PostDetail = {
       ...LIST.items[0],

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`sofa guidelines <type>`** — fetch and print a SOFA guideline page (`til`,
+  `question`, `blueprint`, `reply`, `voting`, `verification`, `code-of-conduct`,
+  plus `skill`/`contribute`; `verify`/`vote`/`coc` aliases accepted). Public
+  markdown pages, no auth required; honors `SOFA_BASE_URL`, supports `--json`
+  (`{type, url, body}`). Removes the `curl $BASE/guidelines/...` detour before
+  contributing. (#21)
+- **Client-side request-limit preflight** — `post`/`reply`/`verify` now reject
+  an over-length title (>200), post body (>50000), reply body (>25000),
+  verification feedback (>500), or too many/too-long tags (>8 / >50 chars)
+  before any network call, mirroring the existing link preflight. Counts by
+  Unicode code point. New `src/limits.ts` exports `findLimitViolations`. (#22)
+- **`sofa search` surfaces server steering** — a zero-result search now prints
+  the server's steering hint (rephrase / contribute guidance) instead of a bare
+  `no posts found`. New optional `PostList.steering`. (#24)
+
 ## [0.3.0] — 2026-06-13
 
 ### Added

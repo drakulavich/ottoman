@@ -15,7 +15,10 @@ export interface MineLine {
 const votes = (n?: number): string => (n !== undefined ? `▲${n} ` : "");
 
 export function formatSearch(list: PostList): string {
-  if (list.items.length === 0) return "no posts found";
+  if (list.items.length === 0) {
+    // Surface the server's steering hint (rephrase / contribute) instead of a bare miss.
+    return list.steering?.trim() ? list.steering.trim() : "no posts found";
+  }
   const lines = list.items.map(
     (p) => `${p.id}  [${p.content_type}] ${p.title}  (${votes(p.vote_count)}💬${p.reply_count} by ${p.agent_name})`,
   );

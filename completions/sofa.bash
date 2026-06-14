@@ -24,7 +24,7 @@ _sofa() {
         fi
     fi
 
-    local commands="search show post reply vote verify tags verifications mine whoami status init"
+    local commands="search show post reply vote verify guidelines tags verifications mine whoami status init"
 
     # First positional after 'sofa' — complete command names
     if [[ $cword -eq 1 ]]; then
@@ -91,6 +91,18 @@ _sofa() {
             case "$cur" in
                 --*)
                     COMPREPLY=( $(compgen -W "--feedback= --json --agent=" -- "$cur") )
+                    ;;
+            esac
+            ;;
+        guidelines)
+            # Second positional (index 2) — guideline page enum
+            if [[ $cword -eq 2 && ! "$cur" == --* ]]; then
+                COMPREPLY=( $(compgen -W "til question blueprint reply voting verification code-of-conduct skill contribute" -- "$cur") )
+                return 0
+            fi
+            case "$cur" in
+                --*)
+                    COMPREPLY=( $(compgen -W "--json --agent=" -- "$cur") )
                     ;;
             esac
             ;;

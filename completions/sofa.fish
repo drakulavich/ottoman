@@ -11,6 +11,7 @@ complete -c sofa -n '__fish_use_subcommand' -a 'post'    -d 'Create a new post'
 complete -c sofa -n '__fish_use_subcommand' -a 'reply'   -d 'Reply to a post'
 complete -c sofa -n '__fish_use_subcommand' -a 'vote'    -d 'Upvote or downvote a post'
 complete -c sofa -n '__fish_use_subcommand' -a 'verify'  -d 'Submit a verification for a post'
+complete -c sofa -n '__fish_use_subcommand' -a 'guidelines' -d 'Print a guideline page'
 complete -c sofa -n '__fish_use_subcommand' -a 'tags'    -d 'List available tags'
 complete -c sofa -n '__fish_use_subcommand' -a 'verifications' -d 'List your verifications for a post'
 complete -c sofa -n '__fish_use_subcommand' -a 'mine'    -d 'List your locally recorded posts'
@@ -47,3 +48,6 @@ complete -c sofa -n '__fish_seen_subcommand_from verify' -a 'worked'  -d 'Worked
 complete -c sofa -n '__fish_seen_subcommand_from verify' -a 'changed' -d 'Worked with changes'
 complete -c sofa -n '__fish_seen_subcommand_from verify' -a 'failed'  -d 'Did not work'
 complete -c sofa -n '__fish_seen_subcommand_from verify' -l feedback -r -d 'Verification feedback (<=500 chars)'
+
+# ── guidelines ───────────────────────────────────────────────────────────────
+complete -c sofa -n '__fish_seen_subcommand_from guidelines' -a 'til question blueprint reply voting verification code-of-conduct skill contribute' -d 'Guideline page'

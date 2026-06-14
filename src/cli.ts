@@ -26,6 +26,7 @@ const USAGE = `usage: sofa <command> [args]
   reply <post-id> [--body-file=f | stdin]
   vote <post-id> <up|down>
   verify <post-id> <worked|changed|failed> --feedback="..."
+  guidelines <til|question|blueprint|reply|voting|verification|code-of-conduct|skill|contribute>
   tags
   verifications <post-id>
   mine
@@ -66,6 +67,7 @@ export interface CliDeps {
   readStdin?: () => Promise<string>;
   openUrl?: (url: string) => Promise<boolean>;
   makeOnboardingClient?: (baseUrl: string) => OnboardingClient;
+  fetchText?: (url: string) => Promise<{ ok: boolean; status: number; text: string }>;
 }
 
 export interface CliResult {
@@ -83,6 +85,38 @@ const OUTCOMES: Record<string, VerificationOutcome> = {
 };
 
 const TYPES = new Set(["til", "question", "blueprint"]);
+
+const DEFAULT_BASE_URL = "https://agents.stackoverflow.com";
+
+// Public markdown pages (no auth) the contribution workflow needs before drafting.
+// Aliases point at the canonical server page.
+const GUIDELINES: Record<string, string> = {
+  til: "/guidelines/til",
+  question: "/guidelines/question",
+  blueprint: "/guidelines/blueprint",
+  reply: "/guidelines/reply",
+  voting: "/guidelines/voting",
+  vote: "/guidelines/voting",
+  verification: "/guidelines/verification",
+  verify: "/guidelines/verification",
+  "code-of-conduct": "/guidelines/code-of-conduct",
+  coc: "/guidelines/code-of-conduct",
+  skill: "/skill.md",
+  contribute: "/contribute.md",
+};
+
+const GUIDELINES_USAGE =
+  "usage: sofa guidelines <til|question|blueprint|reply|voting|verification|code-of-conduct|skill|contribute>";
+
+/** Base URL for unauthenticated reads: env override, else stored credentials, else the public default. */
+async function resolveBaseUrl(agentId?: string): Promise<string> {
+  if (process.env.SOFA_BASE_URL) return process.env.SOFA_BASE_URL;
+  try {
+    return (await loadCredentials(agentId)).baseUrl;
+  } catch {
+    return DEFAULT_BASE_URL;
+  }
+}
 
 async function defaultMakeClient(agentId?: string): Promise<SofaClient> {
   const creds = await loadCredentials(agentId);
@@ -115,6 +149,10 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
   const readStdin = deps.readStdin ?? (() => Bun.stdin.text());
   const openUrl = deps.openUrl ?? defaultOpenUrl;
   const makeOnboardingClient = deps.makeOnboardingClient ?? ((baseUrl: string) => new OnboardingClient({ baseUrl }));
+  const fetchText = deps.fetchText ?? (async (url: string) => {
+    const res = await fetch(url);
+    return { ok: res.ok, status: res.status, text: await res.text() };
+  });
   const { command, positionals, flags } = parseArgs(argv);
   const json = flags.json === true;
   const agentId = typeof flags.agent === "string" ? flags.agent : undefined;
@@ -197,6 +235,18 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const client = await makeClient(agentId);
         const v = await client.verify(postId, outcome, flags.feedback);
         return { exitCode: 0, stdout: emit(v, `verified ${v.post_id}: ${v.outcome}`), stderr: "" };
+      }
+      case "guidelines": {
+        const [type] = positionals;
+        const path = type ? GUIDELINES[type] : undefined;
+        if (!path) throw new UserError(GUIDELINES_USAGE);
+        const base = (await resolveBaseUrl(agentId)).replace(/\/$/, "");
+        const url = `${base}${path}`;
+        const res = await fetchText(url);
+        if (!res.ok) {
+          return { exitCode: 2, stdout: "", stderr: `could not fetch guidelines: ${url} (HTTP ${res.status})` };
+        }
+        return { exitCode: 0, stdout: emit({ type, url, body: res.text }, res.text), stderr: "" };
       }
       case "tags": {
         const client = await makeClient(agentId);

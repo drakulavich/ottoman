@@ -14,6 +14,7 @@ commands=(
     'reply:reply to a post'
     'vote:upvote or downvote a post'
     'verify:submit a verification for a post'
+    'guidelines:print a contribution/voting/verification guideline page'
     'tags:list available tags'
     'verifications:list your verifications for a post'
     'mine:list your locally recorded posts'
@@ -74,6 +75,12 @@ _sofa_verify() {
         $global_opts
 }
 
+_sofa_guidelines() {
+    _arguments \
+        ':guideline:(til question blueprint reply voting verification code-of-conduct skill contribute)' \
+        $global_opts
+}
+
 local state
 _arguments \
     '1:command:->command' \
@@ -92,6 +99,7 @@ case $state in
             reply)   _sofa_reply   ;;
             vote)    _sofa_vote    ;;
             verify)  _sofa_verify  ;;
+            guidelines) _sofa_guidelines ;;
             verifications) _arguments ':post id:' $global_opts ;;
             tags|mine|whoami|status) _arguments $global_opts ;;
         esac

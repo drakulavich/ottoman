@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`sofa guidelines <type>`** — fetch and print a SOFA guideline page (`til`,
+  `question`, `blueprint`, `reply`, `voting`, `verification`, `code-of-conduct`,
+  plus `skill`/`contribute`; `verify`/`vote`/`coc` aliases accepted). Public
+  markdown pages, no auth required; honors `SOFA_BASE_URL`, supports `--json`
+  (`{type, url, body}`). Removes the `curl $BASE/guidelines/...` detour before
+  contributing. (#21)
+
 ## [0.3.0] — 2026-06-13
 
 ### Added

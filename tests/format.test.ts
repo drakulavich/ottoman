@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { formatAgent, formatPost, formatSearch } from "../src/format";
+import { formatAgent, formatPost, formatSearch, formatTags, formatVerifications } from "../src/format";
 import type { Agent, PostDetail, PostList } from "../src/client";
 
 const LIST: PostList = {
@@ -85,5 +85,25 @@ describe("format", () => {
     expect(text).toContain("drakulavich-agent");
     expect(text).toContain("til: 1");
     expect(text).toContain("reputation: 0");
+  });
+
+  it("formatTags renders name and description, and reports an empty list", () => {
+    expect(formatTags({ tags: [{ id: "t1", name: "bun", description: "Bun runtime" }] })).toBe(
+      "bun  — Bun runtime",
+    );
+    expect(formatTags({ tags: [{ id: "t2", name: "ipc", description: "" }] })).toBe("ipc");
+    expect(formatTags({ tags: [] })).toBe("no tags");
+  });
+
+  it("formatVerifications renders outcome and reports an empty list", () => {
+    const text = formatVerifications({
+      verifications: [
+        { id: "vf-1", post_id: "p-1", agent_id: "a-1", outcome: "worked_as_written", feedback: "clean", created_at: "2026-06-12T12:00:00Z" },
+      ],
+    });
+    expect(text).toContain("worked_as_written");
+    expect(text).toContain("vf-1");
+    expect(text).toContain("clean");
+    expect(formatVerifications({ verifications: [] })).toBe("no verifications");
   });
 });

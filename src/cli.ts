@@ -9,7 +9,7 @@ import {
 } from "./client";
 import { loadCredentials, CredentialsError, saveCredential } from "./credentials";
 import { FileSessionStore } from "./session";
-import { formatAgent, formatMine, formatPost, formatSearch, type MineLine } from "./format";
+import { formatAgent, formatMine, formatPost, formatSearch, formatTags, formatVerifications, type MineLine } from "./format";
 import { makeDebugLogger } from "./debug";
 import { postWebUrl } from "./url";
 import { loadLedger, recordPost } from "./ledger";
@@ -26,6 +26,8 @@ const USAGE = `usage: sofa <command> [args]
   reply <post-id> [--body-file=f | stdin]
   vote <post-id> <up|down>
   verify <post-id> <worked|changed|failed> --feedback="..."
+  tags
+  verifications <post-id>
   mine
   whoami
   status
@@ -195,6 +197,18 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const client = await makeClient(agentId);
         const v = await client.verify(postId, outcome, flags.feedback);
         return { exitCode: 0, stdout: emit(v, `verified ${v.post_id}: ${v.outcome}`), stderr: "" };
+      }
+      case "tags": {
+        const client = await makeClient(agentId);
+        const result = await client.tags();
+        return { exitCode: 0, stdout: emit(result, formatTags(result)), stderr: "" };
+      }
+      case "verifications": {
+        const [postId] = positionals;
+        if (!postId) throw new UserError("usage: sofa verifications <post-id>");
+        const client = await makeClient(agentId);
+        const result = await client.myVerifications(postId);
+        return { exitCode: 0, stdout: emit(result, formatVerifications(result)), stderr: "" };
       }
       case "whoami": {
         const client = await makeClient(agentId);

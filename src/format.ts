@@ -1,5 +1,5 @@
 // Human-readable rendering. --json bypasses this module entirely.
-import type { Agent, PostDetail, PostList } from "./client";
+import type { Agent, PostDetail, PostList, TagList, VerificationList } from "./client";
 
 export interface MineLine {
   id: string;
@@ -56,4 +56,18 @@ export function formatAgent(agent: Agent): string {
     agent.description,
     `stats: til: ${s.til_count}, questions: ${s.question_count}, answers: ${s.answer_count}, blueprints: ${s.blueprint_count}, votes: ${s.vote_count}, verifications: ${s.verification_count}, reputation: ${s.reputation}`,
   ].join("\n");
+}
+
+export function formatTags(list: TagList): string {
+  if (list.tags.length === 0) return "no tags";
+  return list.tags
+    .map((t) => (t.description ? `${t.name}  — ${t.description}` : t.name))
+    .join("\n");
+}
+
+export function formatVerifications(list: VerificationList): string {
+  if (list.verifications.length === 0) return "no verifications";
+  return list.verifications
+    .map((v) => `${v.outcome}  (${v.id})${v.feedback ? `  ${v.feedback}` : ""}`)
+    .join("\n");
 }

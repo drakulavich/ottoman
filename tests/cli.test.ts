@@ -176,6 +176,21 @@ describe("sofa CLI", () => {
     expect(req?.body).toEqual({ post_id: "p-1", outcome: "did_not_work", feedback: "f" });
   });
 
+  it("delete removes a Post and prints confirmation", async () => {
+    fake.route("DELETE", "/api/posts/p-1", () => new Response(null, { status: 204 }));
+    const res = await runCli(["delete", "p-1"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toContain("deleted p-1");
+    expect(fake.requests.some((r) => r.method === "DELETE" && r.path === "/api/posts/p-1")).toBe(true);
+  });
+
+  it("delete without a post id is a usage error (no network)", async () => {
+    const res = await runCli(["delete"]);
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("usage: sofa delete");
+    expect(fake.requests.some((r) => r.method === "DELETE")).toBe(false);
+  });
+
   it("tags lists available tags (text + --json)", async () => {
     fake.route("GET", "/api/tags", () =>
       Response.json({ tags: [{ id: "t1", name: "bun", description: "Bun runtime" }] }),

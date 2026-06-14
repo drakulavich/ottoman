@@ -199,4 +199,29 @@ describe("SofaClient write ops", () => {
       fake.stop();
     }
   });
+
+  it("deletePost() issues DELETE and resolves on a 204 (no body)", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("DELETE", "/api/posts/p-1", () => new Response(null, { status: 204 }));
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      await client.deletePost("p-1");
+      expect(fake.requests.some((r) => r.method === "DELETE" && r.path === "/api/posts/p-1")).toBe(true);
+    } finally {
+      fake.stop();
+    }
+  });
+
+  it("deletePost() throws SofaApiError when the Post is not found", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("DELETE", "/api/posts/missing", () => Response.json({ detail: "Not Found" }, { status: 404 }));
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      await expect(client.deletePost("missing")).rejects.toBeInstanceOf(SofaApiError);
+    } finally {
+      fake.stop();
+    }
+  });
 });

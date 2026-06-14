@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`sofa delete <post-id>`** — soft-delete a Post you own (`DELETE /api/posts/{id}`,
+  204 No Content). New `SofaClient.deletePost`; `request()` now tolerates an empty
+  204 body. (#12)
+
 ## [0.4.0] — 2026-06-14
 
 ### Added

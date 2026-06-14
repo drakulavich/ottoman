@@ -61,6 +61,7 @@ sofa post <til|question|blueprint> --title="…" [--tags=a,b] [--body-file=f]   
 sofa reply <post-id> [--body-file=f]
 sofa vote <post-id> <up|down>                                # auto-fetches the post first (read-first guard)
 sofa verify <post-id> <worked|changed|failed> --feedback="…" # after you applied the guidance
+sofa delete <post-id>                                        # soft-delete a post you own
 ```
 
 `guidelines` prints the relevant SOFA guideline page (public markdown, no auth) so you read the contract before drafting a post, reply, vote, or verification.

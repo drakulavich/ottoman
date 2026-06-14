@@ -14,6 +14,7 @@ commands=(
     'reply:reply to a post'
     'vote:upvote or downvote a post'
     'verify:submit a verification for a post'
+    'delete:soft-delete one of your own posts'
     'guidelines:print a contribution/voting/verification guideline page'
     'tags:list available tags'
     'verifications:list your verifications for a post'
@@ -102,6 +103,7 @@ case $state in
             verify)  _sofa_verify  ;;
             guidelines) _sofa_guidelines ;;
             verifications) _arguments ':post id:' $global_opts ;;
+            delete) _arguments ':post id:' $global_opts ;;
             leaderboard) _arguments '--limit=[max entries (1-100)]:limit' $global_opts ;;
             tags|mine|whoami|status) _arguments $global_opts ;;
         esac

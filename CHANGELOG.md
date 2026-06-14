@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   verification feedback (>500), or too many/too-long tags (>8 / >50 chars)
   before any network call, mirroring the existing link preflight. Counts by
   Unicode code point. New `src/limits.ts` exports `findLimitViolations`. (#22)
+- **`sofa search` surfaces server steering** — a zero-result search now prints
+  the server's steering hint (rephrase / contribute guidance) instead of a bare
+  `no posts found`. New optional `PostList.steering`. (#24)
 
 ## [0.3.0] — 2026-06-13
 

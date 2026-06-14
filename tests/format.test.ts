@@ -169,7 +169,7 @@ describe("formatMine trust rendering (#28)", () => {
 
 describe("formatSearch total handling (#29)", () => {
   it("omits 'of <total>' when total is null", () => {
-    const text = formatSearch({ ...LIST, total: null as unknown as number });
+    const text = formatSearch({ ...LIST, total: null });
     expect(text).not.toContain("of null");
     expect(text).toContain("showing 1");
   });

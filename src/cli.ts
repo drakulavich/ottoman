@@ -14,6 +14,7 @@ import { makeDebugLogger } from "./debug";
 import { postWebUrl } from "./url";
 import { loadLedger, recordPost } from "./ledger";
 import { findForbiddenLinks } from "./links";
+import { findLimitViolations } from "./limits";
 import { OnboardingClient, OnboardingError } from "./onboarding";
 import { openUrl as defaultOpenUrl } from "./open-url";
 import pkg from "../package.json";
@@ -194,9 +195,11 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         if (!type || !TYPES.has(type)) throw new UserError("usage: sofa post <til|question|blueprint> --title=...");
         if (typeof flags.title !== "string" || flags.title.trim() === "") throw new UserError("post requires --title=\"...\"");
         const body = await readBody(flags, readStdin);
+        const tags = typeof flags.tags === "string" ? flags.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
+        const limitViolations = findLimitViolations({ title: flags.title as string, body, bodyKind: "post", tags });
+        if (limitViolations.length > 0) throw new UserError(`post exceeds SOFA limits:\n  - ${limitViolations.join("\n  - ")}`);
         const violations = findForbiddenLinks(body);
         if (violations.length > 0) throw new UserError(`post body has links SOFA will reject:\n  - ${violations.join("\n  - ")}`);
-        const tags = typeof flags.tags === "string" ? flags.tags.split(",").map((t) => t.trim()).filter(Boolean) : undefined;
         const client = await makeClient(agentId);
         const post = await client.createPost({ content_type: type as ContentType, title: flags.title, body, tags });
         let ledgerWarning = "";
@@ -212,6 +215,8 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const [postId] = positionals;
         if (!postId) throw new UserError("usage: sofa reply <post-id>");
         const body = await readBody(flags, readStdin);
+        const limitViolations = findLimitViolations({ body, bodyKind: "reply" });
+        if (limitViolations.length > 0) throw new UserError(`reply exceeds SOFA limits:\n  - ${limitViolations.join("\n  - ")}`);
         const violations = findForbiddenLinks(body);
         if (violations.length > 0) throw new UserError(`post body has links SOFA will reject:\n  - ${violations.join("\n  - ")}`);
         const client = await makeClient(agentId);
@@ -232,6 +237,8 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const outcome = OUTCOMES[outcomeKey ?? ""];
         if (!postId || !outcome) throw new UserError("usage: sofa verify <post-id> <worked|changed|failed> --feedback=\"...\"");
         if (typeof flags.feedback !== "string" || flags.feedback.trim() === "") throw new UserError("verify requires --feedback=\"...\" (<=500 chars)");
+        const limitViolations = findLimitViolations({ feedback: flags.feedback });
+        if (limitViolations.length > 0) throw new UserError(limitViolations.join("; "));
         const client = await makeClient(agentId);
         const v = await client.verify(postId, outcome, flags.feedback);
         return { exitCode: 0, stdout: emit(v, `verified ${v.post_id}: ${v.outcome}`), stderr: "" };

@@ -14,6 +14,15 @@ export interface MineLine {
 
 const votes = (n?: number): string => (n !== undefined ? `▲${n} ` : "");
 
+/** Compact trust signal for a row: ` trust <score>` when scored, ` unscored` when
+ *  present-but-unscored, empty when absent. Avoids dumping the raw summary JSON. */
+function trustToken(summary: unknown): string {
+  if (summary === null || summary === undefined || typeof summary !== "object") return "";
+  const s = summary as { status?: unknown; score?: unknown };
+  if (s.status === "scored" && typeof s.score === "number") return ` trust ${s.score}`;
+  return " unscored";
+}
+
 export function formatSearch(list: PostList): string {
   if (list.items.length === 0) {
     // Surface the server's steering hint (rephrase / contribute) instead of a bare miss.
@@ -22,7 +31,9 @@ export function formatSearch(list: PostList): string {
   const lines = list.items.map(
     (p) => `${p.id}  [${p.content_type}] ${p.title}  (${votes(p.vote_count)}💬${p.reply_count} by ${p.agent_name})`,
   );
-  lines.push(`— page ${list.page}, showing ${list.items.length} of ${list.total}${list.has_next ? " (more pages)" : ""}`);
+  // Search mode can return total: null — don't leak "of null"; show just the count.
+  const shown = list.total == null ? `showing ${list.items.length}` : `showing ${list.items.length} of ${list.total}`;
+  lines.push(`— page ${list.page}, ${shown}${list.has_next ? " (more pages)" : ""}`);
   return lines.join("\n");
 }
 
@@ -44,9 +55,7 @@ export function formatMine(lines: MineLine[]): string {
   return lines
     .map((p) => {
       if (p.deleted) return `<deleted>  (${p.id})`;
-      const ts = p.trust_summary !== null && p.trust_summary !== undefined
-        ? ` trust:${JSON.stringify(p.trust_summary)}`
-        : "";
+      const ts = trustToken(p.trust_summary);
       return `${p.id}  [${p.content_type}] ${p.title}  (${votes(p.vote_count)}💬${p.reply_count} 👁${p.view_count}${ts})`;
     })
     .join("\n");

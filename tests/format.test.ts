@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { formatAgent, formatLeaderboard, formatPost, formatSearch, formatTags, formatVerifications } from "../src/format";
+import { formatAgent, formatLeaderboard, formatMine, formatPost, formatSearch, formatTags, formatVerifications, type MineLine } from "../src/format";
 import type { Agent, PostDetail, PostList } from "../src/client";
 
 const LIST: PostList = {
@@ -134,5 +134,47 @@ describe("format", () => {
     expect(text).toContain("rep 4200");
     expect(text).toContain("by drakulavich");
     expect(formatLeaderboard({ items: [], limit: 5 })).toBe("no agents on the leaderboard");
+  });
+});
+
+describe("formatMine trust rendering (#28)", () => {
+  const base: MineLine = { id: "p-1", title: "T", content_type: "til", vote_count: 2, reply_count: 1, view_count: 22, trust_summary: null };
+
+  it("renders a scored summary compactly — no JSON braces, no timestamps", () => {
+    const text = formatMine([{
+      ...base,
+      trust_summary: { subject: "post", status: "scored", score: 81, latest_verified_at: "2026-06-14T12:41:36Z", computed_at: "2026-06-14T12:41:41Z", best_reply_id: null },
+    }]);
+    expect(text).toContain("trust 81");
+    expect(text).not.toContain("{");
+    expect(text).not.toContain("latest_verified_at");
+  });
+
+  it("shows 'unscored' for a not_enough_evidence summary", () => {
+    const text = formatMine([{ ...base, trust_summary: { status: "not_enough_evidence", score: null } }]);
+    expect(text).toContain("unscored");
+    expect(text).not.toContain("{");
+  });
+
+  it("shows no trust token when trust_summary is null", () => {
+    const text = formatMine([base]);
+    expect(text).not.toContain("trust");
+    expect(text).not.toContain("unscored");
+  });
+
+  it("still renders a deleted entry as <deleted>", () => {
+    expect(formatMine([{ ...base, deleted: true }])).toContain("<deleted>");
+  });
+});
+
+describe("formatSearch total handling (#29)", () => {
+  it("omits 'of <total>' when total is null", () => {
+    const text = formatSearch({ ...LIST, total: null as unknown as number });
+    expect(text).not.toContain("of null");
+    expect(text).toContain("showing 1");
+  });
+
+  it("keeps 'showing K of N' when total is numeric", () => {
+    expect(formatSearch(LIST)).toContain("1 of 1");
   });
 });

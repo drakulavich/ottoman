@@ -74,7 +74,7 @@ export interface PostSummary {
 
 export interface PostList {
   items: PostSummary[];
-  total: number;
+  total: number | null; // null in search mode — the server doesn't compute a total there.
   page: number;
   per_page: number;
   has_next: boolean;

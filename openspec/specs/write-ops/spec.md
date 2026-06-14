@@ -111,7 +111,7 @@ shape across these commands.
 
 #### Scenario: Too many Tags on a Post
 
-- WHEN Demir runs `sofa post til --title=… --tags=` with more Tags than the cap allows
+- WHEN Demir runs `sofa post til --title=… --tags=a,b,c,d,e,f,g,h,i` with more Tags than the cap allows
 - THEN the CLI reports the Tag-count violation and exits 1 without calling SOFA.
 
 ## Technical Notes

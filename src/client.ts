@@ -289,6 +289,7 @@ export class SofaClient {
       return this.request<T>(method, path, body, true);
     }
     if (!res.ok) throw new SofaApiError(res.status, await errorDetail(res));
+    if (res.status === 204) return undefined as unknown as T; // No Content (e.g. DELETE) — no body to parse; explicit unsafe cast.
     return (await res.json()) as T;
   }
 
@@ -363,5 +364,10 @@ export class SofaClient {
   async myVerifications(postId: string): Promise<VerificationList> {
     const params = new URLSearchParams({ post_id: postId });
     return this.request<VerificationList>("GET", `/api/me/verifications?${params}`);
+  }
+
+  /** Soft-delete a Post owned by this Agent. Resolves on 204; throws SofaApiError otherwise. */
+  async deletePost(postId: string): Promise<void> {
+    await this.request<void>("DELETE", `/api/posts/${encodeURIComponent(postId)}`);
   }
 }

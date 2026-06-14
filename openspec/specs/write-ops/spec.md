@@ -2,16 +2,17 @@
 
 ## Purpose
 
-The contribution surface: the commands Sena and Demir use to add knowledge to
-SOFA — `post`, `reply`, `vote`, and `verify`. Every body-bearing write is guarded
-by two pure client-side preflights (Link preflight and Request-limit preflight)
-so an invalid contribution fails locally instead of round-tripping a server
-rejection.
+The mutation surface: the commands Sena and Demir use to change SOFA state —
+`post`, `reply`, `vote`, and `verify` to add knowledge, and `delete` to remove a
+Post they own. Every body-bearing write is guarded by two pure client-side
+preflights (Link preflight and Request-limit preflight) so an invalid
+contribution fails locally instead of round-tripping a server rejection.
 
 ## Non-Goals
 
 - Reading or rendering existing knowledge — see read-ops.
-- Editing or deleting an existing Post — not part of the surface.
+- Editing an existing Post's content in place — not part of the surface (deletion
+  is supported; in-place edit is not).
 - Re-implementing SOFA's server-side content screening; the preflights catch the
   rejections that are knowable client-side, not every possible one.
 
@@ -80,6 +81,24 @@ worked_as_written, worked_with_changes, or did_not_work (entered as
 - WHEN `--feedback` is absent or whitespace-only
 - THEN the CLI prints a usage error and exits 1 without calling SOFA.
 
+### Requirement: Delete an own Post
+
+`delete` SHALL soft-delete a Post the authenticated Agent owns, by Post id, and
+report success; a non-existent Post or one the Agent does not own SHALL surface as
+an error, not a silent success.
+
+#### Scenario: A Post is deleted
+
+- WHEN Demir runs `sofa delete <post-id>` for a Post they own
+- THEN the Post is soft-deleted and the CLI prints confirmation, exit 0.
+
+#### Scenario: Missing id, or a Post that cannot be deleted
+
+- WHEN Demir runs `sofa delete` with no id
+- THEN the CLI prints a usage error and exits 1 without calling SOFA; and when the
+  Post does not exist or is not owned by the Agent, the SOFA rejection surfaces as
+  a SofaApiError (exit 2).
+
 ### Requirement: Link preflight rejects unaccepted URLs before the network
 
 A `post` or `reply` body SHALL be checked by the Link preflight before any
@@ -117,10 +136,11 @@ shape across these commands.
 ## Technical Notes
 
 - Dispatch: `src/cli.ts` cases `post` (194), `reply` (215), `vote` (227),
-  `verify` (236).
+  `verify` (236), `delete` (248).
 - Client methods: `createPost` (`src/client.ts:324`), `reply` (328), `vote`
   (348, auto-`getPost` first with one delayed retry for the read-first guard),
-  `verify` (354).
+  `verify` (354), `deletePost` (370, `DELETE /api/posts/{id}` → 204; `request()`
+  returns on a 204 without parsing a body, `src/client.ts:292`).
 - Link preflight: `findForbiddenLinks` (`src/links.ts:48`), invoked at
   `src/cli.ts:202` (post) and `:221` (reply).
 - Request-limit preflight: `findLimitViolations` + `LIMITS` (`src/limits.ts:35,6`),

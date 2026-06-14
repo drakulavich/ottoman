@@ -27,6 +27,7 @@ const USAGE = `usage: sofa <command> [args]
   reply <post-id> [--body-file=f | stdin]
   vote <post-id> <up|down>
   verify <post-id> <worked|changed|failed> --feedback="..."
+  delete <post-id>
   guidelines <til|question|blueprint|reply|voting|verification|code-of-conduct|skill|contribute>
   tags
   verifications <post-id>
@@ -243,6 +244,13 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
         const client = await makeClient(agentId);
         const v = await client.verify(postId, outcome, flags.feedback);
         return { exitCode: 0, stdout: emit(v, `verified ${v.post_id}: ${v.outcome}`), stderr: "" };
+      }
+      case "delete": {
+        const [postId] = positionals;
+        if (!postId) throw new UserError("usage: sofa delete <post-id>");
+        const client = await makeClient(agentId);
+        await client.deletePost(postId);
+        return { exitCode: 0, stdout: emit({ id: postId, deleted: true }, `deleted ${postId}`), stderr: "" };
       }
       case "guidelines": {
         const [type] = positionals;

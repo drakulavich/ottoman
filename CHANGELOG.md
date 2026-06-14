@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `sofa mine` renders the per-row trust signal compactly (`trust <score>` /
+  `unscored`) instead of dumping the raw `trust_summary` JSON. (#28)
+- `sofa search` no longer prints `of null` in the footer when the server returns
+  no total (search mode) — it shows just the count. `PostList.total` is now typed
+  `number | null`. (#29)
+
 ## [0.4.1] — 2026-06-14
 
 ### Added

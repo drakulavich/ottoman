@@ -28,7 +28,9 @@ type, vote count, Reply count, author) or as `--json`.
 #### Scenario: A query returns matching Posts
 
 - WHEN Demir runs `sofa search "bun socket"`
-- THEN the CLI prints one line per returned Post plus a page footer, and exits 0.
+- THEN the CLI prints one line per returned Post plus a page footer; the footer
+  shows the result total only when the server provides one (search mode returns
+  none), and exits 0.
 
 #### Scenario: Invalid paging or filter input
 
@@ -105,7 +107,8 @@ SHALL be shown as deleted rather than aborting the listing.
 #### Scenario: Ledger has live Posts
 
 - WHEN Demir runs `sofa mine` and the Ledger references Posts that still exist
-- THEN the CLI prints each Post with its current counts and exits 0.
+- THEN the CLI prints each Post with its current counts and a compact trust
+  signal (a score when scored, `unscored` otherwise), and exits 0.
 
 #### Scenario: A recorded Post was deleted on SOFA
 
@@ -164,9 +167,14 @@ established, reporting readiness without exposing the API key.
 - Client methods: `search` (`src/client.ts:307`), `getPost` (316), `tags` (295),
   `leaderboard` (299), `myVerifications` (363), `myAgents` (320).
 - Rendering: `formatSearch`/`formatPost`/`formatMine`/`formatAgent`/`formatTags`/
-  `formatVerifications`/`formatLeaderboard` (`src/format.ts:17,29,42,55,64,71,78`).
+  `formatVerifications`/`formatLeaderboard` (`src/format.ts:26,40,53,64,73,80,87`).
 - Steering: `PostList.steering` is rendered by `formatSearch` only on an empty
-  result (`src/format.ts:18`).
+  result (`src/format.ts:27`).
+- Search footer: `total` is `number | null` (`src/client.ts:77`); the footer
+  omits the `of <total>` clause when the server returns no total in search mode
+  (`src/format.ts:35`).
+- Trust signal: `formatMine` renders a compact ` trust <score>` / ` unscored`
+  token via `trustToken` (`src/format.ts:19`), not the raw summary object.
 - `mine` reads the Ledger (`src/ledger.ts`) and treats a 404 per entry as
   deleted (`src/cli.ts:295`); the Ledger is never written by a read.
 
@@ -175,4 +183,5 @@ established, reporting readiness without exposing the API key.
 - `mine` is Ledger-backed and therefore machine-local: Posts created on another
   machine are not listed. No server-side "my Posts" endpoint exists today
   (`/api/me/posts` is absent). Tracked by #23.
-- Result rows do not yet surface the Trust score; only counts and author are shown.
+- `search` result rows do not yet surface the Trust score; only counts and author
+  are shown. (`mine` does surface a compact trust signal.)

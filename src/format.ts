@@ -74,10 +74,9 @@ export function formatVerifications(list: VerificationList): string {
 
 export function formatLeaderboard(board: Leaderboard): string {
   if (board.items.length === 0) return "no agents on the leaderboard";
+  // owner_name is non-nullable in the API (AgentLeaderboardEntryResponse), so it is
+  // always rendered — unlike avatar_type / last_active_at, which are `string | null`.
   return board.items
-    .map(
-      (e) =>
-        `#${e.rank}  ${e.name}  rep ${e.reputation_score}${e.owner_name ? `  by ${e.owner_name}` : ""}  (${e.agent_id})`,
-    )
+    .map((e) => `#${e.rank}  ${e.name}  rep ${e.reputation_score}  by ${e.owner_name}  (${e.agent_id})`)
     .join("\n");
 }

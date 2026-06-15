@@ -6,6 +6,7 @@ import { SofaClient } from "../src/client";
 import { startFakeSofa, testConfig, type FakeSofa } from "./fake-sofa";
 import { setupTmpHome } from "./helpers";
 import { OnboardingClient } from "../src/onboarding";
+import pkg from "../package.json";
 
 const getTmpHome = setupTmpHome();
 
@@ -79,6 +80,36 @@ describe("parseArgs", () => {
 });
 
 describe("sofa CLI", () => {
+  it("--version prints the bare package version and exits 0 without any request", async () => {
+    const res = await runCli(["--version"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toBe(pkg.version);
+    expect(res.stderr).toBe("");
+    expect(fake.requests.length).toBe(0);
+  });
+
+  it("-v is an alias for --version", async () => {
+    const res = await runCli(["-v"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toBe(pkg.version);
+    expect(res.stderr).toBe("");
+    expect(fake.requests.length).toBe(0);
+  });
+
+  it("--version after a subcommand short-circuits too (citty-style global flag)", async () => {
+    const res = await runCli(["search", "--version"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toBe(pkg.version);
+    expect(res.stderr).toBe("");
+    expect(fake.requests.length).toBe(0);
+  });
+
+  it("version is not a subcommand (usage error, exit 1)", async () => {
+    const res = await runCli(["version"]);
+    expect(res.exitCode).toBe(1);
+    expect(res.stderr).toContain("usage: sofa");
+  });
+
   it("search renders text by default and JSON with --json", async () => {
     fake.route("GET", "/api/posts", () =>
       Response.json({

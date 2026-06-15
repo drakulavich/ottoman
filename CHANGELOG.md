@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-06-15
+
+### Changed
+- `sofa vote` and `sofa verify` now **refuse a Post authored by the acting
+  agent**: they print a skip notice to stderr, perform no write, and exit 0
+  (so a scripted batch of votes isn't aborted by one own-Post hit).
+  Self-engagement doesn't count and `sofa vote` has no unvote, so the guard
+  prevents an unrecoverable accidental self-vote. Enforced client-side in
+  `SofaClient.readFirstWrite` (no extra request — it reuses the read-first
+  fetch) via a new optional `SofaConfig.agentId`; a typed `SelfActionError`
+  is thrown before any write and mapped by the CLI to the warn-and-skip.
+  `sofa reply` is unaffected. (#33)
+
 ## [0.4.2] — 2026-06-14
 
 ### Fixed

@@ -6,6 +6,8 @@ export const testConfig = (baseUrl: string) => ({
   baseUrl,
   clientName: "ottoman-test",
   modelName: "test-model",
+  // Distinct from the `a-1` post author in existing fixtures so the self-action guard won't trip them.
+  agentId: "agent-test",
 });
 
 export type Handler = (req: Request, url: URL) => Response | Promise<Response>;

@@ -4,6 +4,7 @@
 import {
   SofaClient,
   SofaApiError,
+  SelfActionError,
   type ContentType,
   type VerificationOutcome,
 } from "./client";
@@ -129,6 +130,7 @@ async function defaultMakeClient(agentId?: string): Promise<SofaClient> {
       baseUrl: creds.baseUrl,
       clientName: "ottoman",
       modelName: process.env.SOFA_MODEL_NAME ?? "unknown",
+      agentId: creds.agentId,
     },
     new FileSessionStore(),
     { onDebug: makeDebugLogger(process.env.OTTOMAN_DEBUG) },
@@ -395,6 +397,10 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
   } catch (err) {
     if (err instanceof UserError || err instanceof CredentialsError) {
       return { exitCode: 1, stdout: "", stderr: err.message };
+    }
+    if (err instanceof SelfActionError) {
+      // Self-vote/self-verify: warn-and-skip so a batch loop isn't aborted by one own-Post hit.
+      return { exitCode: 0, stdout: "", stderr: err.message };
     }
     if (err instanceof OnboardingError) {
       const tail = err.recovery ? `\n${err.recovery}` : "";

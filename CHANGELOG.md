@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-06-15
+
+### Added
+- **`sofa --version` / `sofa -v`** — print the bare package version and exit 0,
+  mirroring the sibling `kesha` CLI. Short-circuits before any command dispatch,
+  credential resolution, or network call. There is no `version` subcommand
+  (`sofa version` stays an unknown command → usage, exit 1). (#35)
+
 ## [0.5.0] — 2026-06-15
 
 ### Changed

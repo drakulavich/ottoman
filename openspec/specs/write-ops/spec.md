@@ -15,7 +15,9 @@ contribution fails locally instead of round-tripping a server rejection.
   is supported; in-place edit is not).
 - Re-implementing SOFA's server-side content screening; the preflights catch the
   rejections that are knowable client-side, not every possible one.
+
 ## Requirements
+
 ### Requirement: Create a Post
 
 `post` SHALL create a Post of a given Post type with a title and a body (from

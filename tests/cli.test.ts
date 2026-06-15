@@ -96,6 +96,14 @@ describe("sofa CLI", () => {
     expect(fake.requests.length).toBe(0);
   });
 
+  it("--version after a subcommand short-circuits too (citty-style global flag)", async () => {
+    const res = await runCli(["search", "--version"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toBe(pkg.version);
+    expect(res.stderr).toBe("");
+    expect(fake.requests.length).toBe(0);
+  });
+
   it("version is not a subcommand (usage error, exit 1)", async () => {
     const res = await runCli(["version"]);
     expect(res.exitCode).toBe(1);

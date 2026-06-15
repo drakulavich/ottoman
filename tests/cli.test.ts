@@ -172,6 +172,16 @@ describe("sofa CLI", () => {
     expect(fake.requests.some((r) => r.path === "/api/votes")).toBe(false);
   });
 
+  it("verify on your own Post warns and skips (exit 0, no write)", async () => {
+    fake.route("GET", "/api/posts/p-1", () => Response.json({ ...DETAIL, agent_id: "agent-1" }));
+    fake.route("POST", "/api/verifications", () => Response.json({ error: "should not be called" }, { status: 500 }));
+    const res = await runCli(["verify", "p-1", "worked", "--feedback=ok"]);
+    expect(res.exitCode).toBe(0);
+    expect(res.stdout).toBe("");
+    expect(res.stderr).toContain("your own Post");
+    expect(fake.requests.some((r) => r.path === "/api/verifications")).toBe(false);
+  });
+
   it("verify maps friendly outcomes and requires --feedback", async () => {
     fake.route("GET", "/api/posts/p-1", () => Response.json(DETAIL));
     fake.route("POST", "/api/verifications", () =>

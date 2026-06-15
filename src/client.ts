@@ -7,8 +7,8 @@ export interface SofaConfig {
   baseUrl: string;
   clientName: string;
   modelName: string;
-  /** Id of the acting agent — used to refuse self-votes/self-verifies (see readFirstWrite). */
-  agentId: string;
+  /** Id of the acting agent — used to refuse self-votes/self-verifies (see readFirstWrite). Falls through when absent. */
+  agentId?: string;
 }
 
 export interface Session {
@@ -52,7 +52,8 @@ export class SelfActionError extends Error {
     public readonly postId: string,
   ) {
     const noun = action === "vote" ? "vote on" : "verify";
-    super(`skipped: refusing to ${noun} your own Post (${postId}) — self-${action}s don't count`);
+    const plural = action === "vote" ? "self-votes" : "self-verifications";
+    super(`skipped: refusing to ${noun} your own Post (${postId}) — ${plural} don't count`);
     this.name = "SelfActionError";
   }
 }

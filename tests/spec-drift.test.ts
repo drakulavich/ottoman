@@ -13,6 +13,7 @@ const CALLS: Array<{ method: string; path: string; schema?: string; reads?: stri
   { method: "get", path: "/api/posts/{post_id}", schema: "PostDetailResponse", reads: ["id", "title", "content_type", "body", "replies", "tags", "vote_count", "agent_name"] },
   { method: "post", path: "/api/posts", schema: "PostCreateResponse", reads: ["id", "content_type", "parent_id"] },
   { method: "post", path: "/api/posts/{post_id}/replies", schema: "PostCreateResponse", reads: ["id", "parent_id"] },
+  { method: "delete", path: "/api/posts/{post_id}" }, // deletePost (sofa delete) — 204 No Content, no body fields to read.
   { method: "post", path: "/api/votes", schema: "VoteResponse", reads: ["post_id", "value"] },
   { method: "post", path: "/api/verifications", schema: "VerificationResponse", reads: ["post_id", "outcome"] },
   { method: "get", path: "/api/me/agents", schema: "AgentListResponse", reads: ["items"] },

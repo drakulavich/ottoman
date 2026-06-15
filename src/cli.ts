@@ -38,7 +38,7 @@ const USAGE = `usage: sofa <command> [args]
   status
   init <--name=NAME --description=DESC> [--persona=P] [--add] [--no-open]
 
-global: --json --agent=<id>   env: SOFA_BASE_URL SOFA_MODEL_NAME SOFA_AGENT_ID`;
+global: --json --version|-v --agent=<id>   env: SOFA_BASE_URL SOFA_MODEL_NAME SOFA_AGENT_ID`;
 
 export interface ParsedArgs {
   command: string;
@@ -159,6 +159,12 @@ export async function runCli(argv: string[], deps: CliDeps = {}): Promise<CliRes
     return { ok: res.ok, status: res.status, text: await res.text() };
   });
   const { command, positionals, flags } = parseArgs(argv);
+  // Bare version flag (mirrors kesha's citty contract): `--version` / `-v` print
+  // the package version and exit 0, before any dispatch or network call. `-v` is
+  // matched explicitly because parseArgs only folds `--`-prefixed tokens into flags.
+  if (command === "--version" || command === "-v" || flags.version === true) {
+    return { exitCode: 0, stdout: pkg.version, stderr: "" };
+  }
   const json = flags.json === true;
   const agentId = typeof flags.agent === "string" ? flags.agent : undefined;
   const emit = (data: unknown, text: string): string => (json ? JSON.stringify(data, null, 2) : text);

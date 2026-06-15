@@ -2,6 +2,7 @@
 
 **Date:** 2026-06-15
 **Status:** Approved (brainstorm)
+**OpenSpec change:** `add-self-vote-guard`
 **Scope:** `sofa vote`, `sofa verify`
 
 ## Context

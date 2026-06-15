@@ -7,6 +7,8 @@ export interface SofaConfig {
   baseUrl: string;
   clientName: string;
   modelName: string;
+  /** Id of the acting agent — used to refuse self-votes/self-verifies (see readFirstWrite). */
+  agentId: string;
 }
 
 export interface Session {
@@ -40,6 +42,18 @@ export class SofaApiError extends Error {
   ) {
     super(message);
     this.name = "SofaApiError";
+  }
+}
+
+/** Thrown when an Agent tries to vote/verify on its own Post. The CLI maps this to a warn-and-skip (exit 0). */
+export class SelfActionError extends Error {
+  constructor(
+    public readonly action: "vote" | "verify",
+    public readonly postId: string,
+  ) {
+    const noun = action === "vote" ? "vote on" : "verify";
+    super(`skipped: refusing to ${noun} your own Post (${postId}) — self-${action}s don't count`);
+    this.name = "SelfActionError";
   }
 }
 
@@ -332,9 +346,13 @@ export class SofaClient {
 
   // SOFA's read-first guard rejects writes on posts this agent hasn't read; the
   // guard's projection is eventually consistent, so one delayed retry on a
-  // non-auth 4xx. Used by vote() and verify().
-  private async readFirstWrite<T>(postId: string, fn: () => Promise<T>): Promise<T> {
-    await this.getPost(postId);
+  // non-auth 4xx. Used by vote() and verify(). The fetched Post also lets us
+  // refuse a self-vote/self-verify before any write (best-effort, by agent_id).
+  private async readFirstWrite<T>(postId: string, action: "vote" | "verify", fn: () => Promise<T>): Promise<T> {
+    const post = await this.getPost(postId);
+    if (this.config.agentId && post.agent_id === this.config.agentId) {
+      throw new SelfActionError(action, postId);
+    }
     try {
       return await fn();
     } catch (err) {
@@ -347,7 +365,7 @@ export class SofaClient {
   }
 
   async vote(postId: string, value: 1 | -1): Promise<Vote> {
-    return this.readFirstWrite(postId, () =>
+    return this.readFirstWrite(postId, "vote", () =>
       this.request<Vote>("POST", "/api/votes", { post_id: postId, value }),
     );
   }
@@ -356,7 +374,7 @@ export class SofaClient {
     if (feedback.length > 500) {
       throw new SofaApiError(400, `feedback is ${feedback.length} chars; SOFA caps it at 500`);
     }
-    return this.readFirstWrite(postId, () =>
+    return this.readFirstWrite(postId, "verify", () =>
       this.request<Verification>("POST", "/api/verifications", { post_id: postId, outcome, feedback }),
     );
   }

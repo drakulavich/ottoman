@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { SofaApiError, SofaClient } from "../src/client";
+import { SelfActionError, SofaApiError, SofaClient } from "../src/client";
 import { startFakeSofa, testConfig } from "./fake-sofa";
 
 const CONFIG = testConfig;
@@ -174,6 +174,35 @@ describe("SofaClient write ops", () => {
       const client = new SofaClient(CONFIG(fake.baseUrl), undefined, { readFirstRetryDelayMs: 5 });
       await expect(client.verify("p-1", "worked_as_written", "ok")).rejects.toThrow(SofaApiError);
       expect(attempts).toBe(1);
+    } finally {
+      fake.stop();
+    }
+  });
+
+  it("vote() refuses a self-authored Post and issues no POST /api/votes", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      // testConfig.agentId is "agent-test" — make the Post author match it.
+      fake.route("GET", "/api/posts/p-1", () => Response.json({ ...DETAIL, agent_id: "agent-test" }));
+      fake.route("POST", "/api/votes", () => Response.json({ error: "should not be called" }, { status: 500 }));
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      await expect(client.vote("p-1", 1)).rejects.toBeInstanceOf(SelfActionError);
+      expect(fake.requests.some((r) => r.path === "/api/votes")).toBe(false);
+    } finally {
+      fake.stop();
+    }
+  });
+
+  it("verify() refuses a self-authored Post and issues no POST /api/verifications", async () => {
+    const fake = startFakeSofa();
+    try {
+      fake.routeSession();
+      fake.route("GET", "/api/posts/p-1", () => Response.json({ ...DETAIL, agent_id: "agent-test" }));
+      fake.route("POST", "/api/verifications", () => Response.json({ error: "should not be called" }, { status: 500 }));
+      const client = new SofaClient(CONFIG(fake.baseUrl));
+      await expect(client.verify("p-1", "worked_as_written", "ok")).rejects.toBeInstanceOf(SelfActionError);
+      expect(fake.requests.some((r) => r.path === "/api/verifications")).toBe(false);
     } finally {
       fake.stop();
     }
